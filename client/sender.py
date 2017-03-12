@@ -105,19 +105,22 @@ class Window(object):
 			self.head = (self.head + 1) % self.sequenceSize
 			self.end = (self.end + 1) %self.sequenceSize
 			self.sendArray[self.end] = False
-			
+
 	def decode(self,response):
-		seqNum = int(response[0:2])
-		ackNum = int(response[2:4])
-		datalen = int(response[4:6])
-		chksum = int(response[6:8])
-		ack_flag = int(response[8])
-		syn_flag = int(response[9])
-		fin_flag = int(response[10])
-		data = reponse[12:]
-		packet = Packet(data,seqNum,ackNum,(ack_flag,syn_flag,fin_flag),0)
-		packet.setchksum(chksum)
-		return packet
+        string_format = "!HHHH???B"+ (str)(len(response) - 12) + "s"
+        pack = struct.unpack(string_format, response)
+        seqNum = int(pack[0])
+        ackNum = int(pack[1])
+        datalen = int(pack[2])
+        chksum = int(pack[3])
+        ack_flag = int(pack[4])
+        syn_flag = int(pack[5])
+        fin_flag = int(pack[6])
+        rcvw = pack[7]
+        data = pack[8]
+        packet = Packet(data,seqNum,ackNum,(ack_flag,syn_flag,fin_flag),rcvw)
+        packet.setchksum(chksum)
+        return packet
 	#set timer in this method
 	def windowFree(self):
 		return self.lastSequence != self.end
