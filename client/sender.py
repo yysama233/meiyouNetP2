@@ -38,19 +38,19 @@ class Window(object):
 	def __init__(self,sequenceBit,serHost,serPort,mrws):
 		self.sequenceSize = pow(2,sequenceBit)
 		self.windowSize = self.sequenceSize/2
-		self.sendArray = [False] * self.sequenceSize
-		self.sendBuffer = []
-		self.pktBuffer = []
-		self.recBuffer = []
-		#self.timerArray = []
+		self.sendSeqArray = [False] * self.sequenceSize
+		self.pktArray = []
+		self.timerArray = []
 		self.head = 0
 		self.end = self.windowSize
 		self.lastSequence = 0
 		self.lastAck = 0
+
 		self.serHost = serHost
 		self.serPort = serPort
 		self.mrws = mrws
 
+		self.rcvBuffer = []
 	def cliConnect(self):
 		sock = socket(AF_INET,SOCK_DGRAM)
 		synPack = Packet('Hello',0,0,(0,1,0),self.mrws)
@@ -67,19 +67,45 @@ class Window(object):
 					return True
 			except:
 				print("retry connect...")
-		return False	
-	def markAck(self,ACK):
-		self.sendArray[ACK] = True
-		
-	def pushToBuffer(self,packet):
-		self.sendBuffer.append(packet)
-		
+		return False
+	def setRevFile(self,fileName):
+		Name,fileType = fileName.split('.')
+		self.rcvFile = Name + '-received'+'.'+fileType
+	def sendPkt(self,data):
+		pkt = Packet(data,self.lastSequence,0,(0,0,0),self.mrws)
+		pktMsg = pkt.pack()
+		self.pktArray.insert(pkt.seqNum,pkt]
+		self.timerArray.insert(pkt.seqNum,time())
+		self.lastSequence = (self.lastSequence + 1) % self.sequenceSize
+		try:
+			self.sock.sendto(pkt,(self.serHost,self.serPort))
+			
+			return pkt.datalen
+		except:
+			return 0
+	def rcvMsg(self,ackMsg):
+		rcvPkt = self.decode(ackMsg)
+		if (rcvPkt.ack_flag):
+			sendPkt = self.pktArray[rcvPkt.ack_num]
+			if (sendPkt):
+				if not (self.sendArray[sendPkt.seq_num]):
+					self.sendArray[sendPkt.seq_num] = True
+					self.rcvBuffer.insert(sendPkt.seq_num,rcvPkt.data)
+					self.moveToNext()
+				rcvAckPkt = Packet("ack",0,sendPkt.seq_num,(1,0,0),0)
+				try:
+					self.sock.sendto(rcvAckPkt,(self.serHost,self.serPort))
+				except:
+					pass
+
+
 	def moveToNext(self):
 		while(self.sendArray[self.head]):
 			self.send_pkt(self.end)
 			self.head = (self.head + 1) % self.sequenceSize
 			self.end = (self.end + 1) %self.sequenceSize
 			self.sendArray[self.end] = False
+			
 	def decode(self,response):
 		seqNum = int(response[0:2])
 		ackNum = int(response[2:4])
@@ -103,56 +129,94 @@ class Window(object):
 				if self.sendBuffer[i].getTimeOut(time()):
 					toResend.append(self.sendbuffer[i])
 		return toResend
-
+	def existBuffer(self):
+		return len(self.pktArray) != 0
 
 
 
 SEQUENCE_BIT = 16
 TIMEOUT = 2 #seconds
-
-
+DATA_SIZE = 2000
+def istext(filename):
+    try:
+        f = open(filename)
+        s = f.read(512)
+    except:
+        print("invalid file")
+        sys.exit()
+    text_characters = "".join(map(chr,range(32,127)) + list("\n\r\t\b"))
+    null_trans = string.maketrans("","")
+    if not s:
+        f.close()
+        return True
+    if "\0" in s:
+        return False
+    t=s.translate(null_trans,text_characters)
+    if float(len(t))/float(len(s))>0.3:
+        return False
+    f.close()
+    return True
+def checkFile(fileName):
+	if not (istext(fileName)):
+		print ("Binary File")
+		return False
+	try:
+		f = open(fileNamem,'r')
+	except:
+		return False
+	f.close()
+	return True
 def connect(serHost,serPort,mrws):
 	cliWin = Window(SEQUENCE_BIT,serHost,serPort,mrws)
 	result = cliWin.cliConnect()
 	if (result):
-		return result
+		return cliWin
 	else:
 		print ("fail to connect to server")
 		sys.exit()
-def transfer(file,serHost,serPort,mrws):
+def transfer(fileName,cliWin):
+	f = open(fileName,'rb')
+	data = f.read(DATA_SIZE)
+	transferred = 0
+	cliWin.setRevFile(fileName)
+	cliWin.sock.settimeout(0.01)
+	while (data or cliWin.existBuffer()):
+		size = cliWin.sendPkt(data)
+		transferred += size
+		data = f.read(DATA_SIZE)
+		try:
+			ackMsg,addr = sock.recvfrom(2048)
+			cliWin.recMsg(ackMsg)
+		except socket.timeout as e:
+			pass
+		#resend packets
 	return None
 def disconnect():
 	return None
+
 def clientStart(argv):
 	if (len(argv) != 3):
 		print("Invalid arguments")
 		sys.exit()
 	serHost,serPort = argv[1].split(':')
 	mrws = int(argv[2])
-	connectResult = connect(serHost,int(serPort),mrws)
+	cliWin = connect(serHost,int(serPort),mrws)
 	
 	while(True):
 		command = input("please input command:\n")
 		commandList = command.split()
 		if (len(commandList) > 1):
 			if (commandList[0] == 'transfer' and len(commandList) == 2):
-				if (connectResult):
-					transfer(commandList[1],serHost,serPort,mrws)
+				fileName = commandList[1]
+				if (checkFile(fileName)):
+					transfer(fileName,cliWin)
 				else:
-					print "Please set up connection first"
+					print ("Invlid file name")
 			elif (commandList[0] == 'disconnect' and len(commandList) == 1):
-				if (connectResult):
 					disconnect()
-					break
-				else:
-					print "Please set up connection first"	
+					break	
 			else:
 				print "invalid command\n"
-
-
-
-
-
 
 
 
