@@ -26,4 +26,9 @@ class Packet(object):
 		return sum
 	def getTimeOut(self,curTime):
 		return (self.time - curTime > 2)
-	def pack(self):
+    def pack(self):
+        self.chksum = self.makecheksum(self.data)
+        return struct.pack(self.formatString,self.seq_num,self.ack_num,self.datalen,self.chksum,self.ack_flag,self.syn_flag,self.fin_flag,self.mrws,self.data)
+
+    def getTimeOut(self,curTime):
+        return (self.time - curTime > 2)
