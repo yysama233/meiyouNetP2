@@ -74,9 +74,9 @@ public class Server {
 
     try {
       DatagramPacket reply_packet = createReplyPacket(seqNum, ackNum, ackFlag, synFlag, finFlag, rcvw, data, client_addr, client_port);
-      pktArray.add(reply_packet);
-      timeArray.add(System.currentTimeMillis());
-      lastAck = (lastAck + 1) % sequenceSize;
+      // pktArray.add(reply_packet);
+      // timeArray.add(System.currentTimeMillis());
+      // lastAck = (lastAck + 1) % sequenceSize;
       serverSocket.send(reply_packet);
     } catch (Exception e) {
       System.out.println("Exeception found: data sent failure");
@@ -92,20 +92,18 @@ public class Server {
         return "ConnRequest";
         // after this case all other cases are yy and can be changed as you wish!
     } else if (!synFlag && ackFlag && !finFlag) {
-      if (data.length() != 0) {
-          return "TransferData";
-      } else {
-          return "ConnSetup.";
-      }
+          return "AckRecvd";
     } else if (finFlag && !synFlag && ackFlag) {
         return "Disconnect";
+    } else if (!finFlag && !synFlag && !ackFlag){
+        return "TransferData";
     } else {
         return "wtf";
     }
 
   }
 //////////////////////////////////////////main////////////////////////////////////////////
-	public static void main (String[] args)  throws IOException{
+    public static void main (String[] args)  throws IOException{
 
     //Check command line input length
     if (args.length != 1) {
@@ -115,7 +113,7 @@ public class Server {
     }
     //initialize respective local variables and take in value
     int clientportnumber;
-		int portnumber;
+        int portnumber;
 
     //Check the validity of port number input
     try {
@@ -132,7 +130,7 @@ public class Server {
 
     try {
     //initiate the server socket
-		  DatagramSocket serverSocket = new DatagramSocket(portnumber);
+          DatagramSocket serverSocket = new DatagramSocket(portnumber);
       System.out.println("serverSocket is created, waiting for response");
       byte[] buf = new byte[1024];
       DatagramPacket received_packet = new DatagramPacket(buf, buf.length);
@@ -184,12 +182,12 @@ public class Server {
                 // the acknum of reply = seqNum + dataLen
                 // we want to reply ack = true and syn = true, fin = false;
                 handshake(ackNum, 0, true, true, false, rcvw, "MEISHAONVNIHAO", client_addr, client_port, serverSocket);
-            case "ConnSetup" :
-              continue;
-              // don't know what to do yet
             case "TransferData":
-              continue;
-              // don't know how to do yet
+                sendData(seqNum, seqNum, true, false, false, rcvw, clientdata.toUpperCase(), client_addr, client_port, serverSocket);
+                // don't know how to do yet
+            case "Disconnect":
+                continue;
+                // don't know what to do yet
         }
 
       }
