@@ -33,18 +33,6 @@ public class PacketProcessor {
     return true;
     }
 
-    public static int makechecksum(String data){
-        int sum = 0;
-        for (int i = 0; i <  data.length(); i++) {
-            char c = data.charAt(i);
-            sum = sum +  (int)(c);
-            if (sum > 0xFFFF){
-                sum = (sum + 1) & (0x0000FFFF);
-            }
-        }
-        return sum;
-    }
-
     /**
     * the helper fucntions for unpacking the byte array
     **/
@@ -95,7 +83,6 @@ public class PacketProcessor {
     /**
     * the helper fucntions for packing the byte array
     **/
-
     public static byte[] pack(int seq_num,int ack_num,int data_len,int checksum,boolean ack_flag,boolean syn_flag,boolean fin_flag,int rcws,String data) throws IOException{
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
