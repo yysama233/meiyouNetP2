@@ -1,4 +1,4 @@
-@@ -0,0 +1,71 @@
+
 import java.util.ArrayList;
 import java.net.*;
 import java.util.Arrays;
@@ -41,6 +41,7 @@ public class window {
 		this.unacked++;
 		this.end++;
 		this.end++;
+		this.windowsize--;
 	}
 	//ack a packet in the window
 	public void ackpacket(int pktnumber) {
@@ -49,6 +50,7 @@ public class window {
 		timer.set(pktnumber, null);
 		this.unacked--;
 		this.start++;
+		this.windowsize++;
 	}
 
 	//check if windowsize if full of unacked?
