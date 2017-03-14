@@ -26,12 +26,10 @@ class Packet(object):
                 sum = (sum + 1) & (0x0000FFFF)
         return sum
     def setchksum(self,checksum):
-    	self.chksum = checksum
+        self.chksum = checksum
     def pack(self):
-    	self.chksum = self.makecheksum(self.data)
+        self.chksum = self.makecheksum(self.data)
         return struct.pack(self.formatString,self.seq_num,self.ack_num,self.datalen,self.chksum,self.ack_flag,self.syn_flag,self.fin_flag,self.mrws,self.data)
-
-	
     
 class Window(object):
 	def __init__(self,sequenceBit,serHost,serPort,mrws):
@@ -185,7 +183,91 @@ class Window(object):
 						except:
 							pass
 
-
+    def cliConnect(self):
+        sock = socket(AF_INET,SOCK_DGRAM)
+        synPack = Packet('Hello',0,0,(0,1,0),self.mrws)
+        synMsg = synPack.pack()
+        #print synMsg[12:]
+        sock.settimeout(2)
+        for i in range(0,3):
+            sock.sendto(synMsg,(self.serHost,self.serPort))
+            try:
+                response,serAdd = sock.recvfrom(2048)
+                print "received ack"
+                resPack = self.decode(response)
+                if (resPack.ack_num == 0 and resPack.ack_flag == 1 and resPack.syn_flag == 1):
+                    self.sock = sock
+                    return True
+            except:
+                print("retry connect...")
+        return False
+    def disConnect(self):
+        finPack = Packet("Bye",0,0,(0,0,1),0)
+        finMsg = finPack.pack()
+        self.sock.settimeout(2)
+        for i in range(0,3):
+            sock.sendto(finMsg,(self.serHost,self.serPort))
+            try:
+                response,serAdd = sock.recvfrom(2048)
+                resPack = self.decode(response)
+                if (resPack.ack_num == 0 and resPack.fin_flag == 1 and resPack.ack_flag == 1):
+                    return True
+            except:
+                print("retry disconnect...")
+        return False
+    def setRevFile(self,fileName):
+        Name,fileType = fileName.split('.')
+        self.rcvFile = Name + '-received'+'.'+fileType
+        self.rcvWrite = open(self.rcvFile,'w')
+    def sendPkt(self,data):
+        pkt = Packet(data,self.lastSequence,0,(0,0,0),self.mrws)
+        pktMsg = pkt.pack()
+        self.pktArray.insert(pkt.seq_num,pkt)
+        self.timerArray.insert(pkt.seq_num,time())
+        self.lastSequence = (self.lastSequence + 1) % self.sequenceSize
+        try:
+            self.sock.sendto(pktMsg,(self.serHost,self.serPort))
+            
+            return pkt.datalen
+        except:
+            return 0
+    def moveToNext(self):
+        while(self.sendArray[self.head]):
+            #self.send_pkt(self.end)
+            self.rcvWrite(self.rcvBuffer[self.head])
+            self.head = (self.head + 1) % self.sequenceSize
+            self.end = (self.end + 1) %self.sequenceSize
+            self.sendArray[self.end] = False
+    def rcvMsg(self,ackMsg):
+        rcvPkt = self.decode(ackMsg)
+        rcvChkSum = rcvPkt.makecheksum(rcvPkt.data)
+        if (rcvChkSum != rcvPkt.chksum):
+            return 0
+        if (rcvPkt.ack_flag):
+            sendPkt = self.pktArray[rcvPkt.ack_num]
+            if (sendPkt):
+                rcvAckPkt = Packet("ack",0,sendPkt.seq_num,(1,0,0),0)
+                try:
+                    self.sock.sendto(rcvAckPkt.pack(),(self.serHost,self.serPort))
+                except:
+                    pass
+                if not (self.sendArray[sendPkt.seq_num]):
+                    self.sendArray[sendPkt.seq_num] = True
+                    self.rcvBuffer.insert(sendPkt.seq_num,rcvPkt.data)
+                    self.moveToNext()
+                    return len(rcvPkt.data)
+        return 0
+    def finishTransfer(self):
+        print "file " + self.rcvFile + "is downloaded"
+        self.rcvWrite.close()
+        self.sequenceSize = pow(2,sequenceBit)
+        self.windowSize = self.sequenceSize/2
+        self.sendArray = [False] * self.sequenceSize
+        self.pktArray = [False] * self.sequenceSize
+        self.timerArray = [False] * self.sequenceSize 
+        self.head = 0
+        self.end = self.windowSize
+        self.lastSequence = 0
 
 SEQUENCE_BIT = 16
 TIMEOUT = 2 #seconds
@@ -288,7 +370,5 @@ def clientStart(argv):
 			else:
 				print "invalid command\n"
 
-
-
 if __name__ == "__main__":
-	clientStart(sys.argv)
+    clientStart(sys.argv)
