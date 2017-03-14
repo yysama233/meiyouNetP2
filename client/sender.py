@@ -329,7 +329,7 @@ def transfer(fileName,cliWin):
 
         try:
             ackMsg,addr = sock.recvfrom(1000)
-            receivedSize = cliWin.recMsg(ackMsg)
+            receivedSize = cliWin.rcvMsg(ackMsg)
             recevived += receivedSize
         except:
             pass
