@@ -47,9 +47,10 @@ public class Server {
   }
 
   private static DatagramPacket createReplyPacket(int seqNum,int ackNum, boolean ackFlag,boolean synFlag,boolean finFlag,int rcvw,String data ,InetAddress client_addr, int client_port) throws Exception{
-      DatagramPacket sent_packet = new DatagramPacket(new byte[1024],1024, client_addr, client_port);
+      DatagramPacket sent_packet = new DatagramPacket(new byte[1000], 1000, client_addr, client_port);
       int dataLen = data.length();
-      int checksum = PacketProcessor.makechecksum(data);
+      int checksum = PacketProcessor.makechecksum(data,dataLen);
+      System.out.println("checksum" + checksum);
       byte[] reply = PacketProcessor.pack(seqNum, ackNum, dataLen, checksum, ackFlag, synFlag, finFlag, rcvw, data);
       sent_packet.setData(reply);
       sent_packet.setLength(reply.length);
@@ -59,9 +60,7 @@ public class Server {
   private static void handshake(int seqNum,int ackNum,boolean ackFlag,boolean synFlag,boolean finFlag,int rcvw,String data, InetAddress client_addr, int client_port, DatagramSocket serverSocket) {
       // send an syn&ack packet back to the client
       try {
-          System.out.println("ackFlag: " + ackFlag);
-          System.out.println("synFlag: " + synFlag);
-          System.out.println("finFlag: " + finFlag);
+
           DatagramPacket reply = createReplyPacket(seqNum, ackNum, ackFlag, synFlag, finFlag, rcvw, data, client_addr, client_port);
           serverSocket.send(reply);
           System.out.println("Syn&Ack sent! Connection setup.");
@@ -73,11 +72,18 @@ public class Server {
   private static void sendData(int seqNum,int ackNum,boolean ackFlag,boolean synFlag,boolean finFlag,int rcvw,String data, InetAddress client_addr, int client_port, DatagramSocket serverSocket) {
 
     try {
+      System.out.println("seqNum: " + seqNum);
+      System.out.println("ackNum: " + ackNum);
+      System.out.println("ackFlag: " + ackFlag);
+      System.out.println("synFlag: " + synFlag);
+      System.out.println("finFlag: " + finFlag);
       DatagramPacket reply_packet = createReplyPacket(seqNum, ackNum, ackFlag, synFlag, finFlag, rcvw, data, client_addr, client_port);
+      System.out.println(client_addr);
       // pktArray.add(reply_packet);
       // timeArray.add(System.currentTimeMillis());
       // lastAck = (lastAck + 1) % sequenceSize;
       serverSocket.send(reply_packet);
+      System.out.println("data sent");
     } catch (Exception e) {
       System.out.println("Exeception found: data sent failure");
     }
@@ -130,7 +136,7 @@ public class Server {
 
     try {
     //initiate the server socket
-          DatagramSocket serverSocket = new DatagramSocket(portnumber);
+      DatagramSocket serverSocket = new DatagramSocket(portnumber);
       System.out.println("serverSocket is created, waiting for response");
       byte[] buf = new byte[1024];
       DatagramPacket received_packet = new DatagramPacket(buf, buf.length);
@@ -144,26 +150,26 @@ public class Server {
         int client_port = received_packet.getPort();
 
         byte[] recc = received_packet.getData();
-        System.out.println("length of packet" + recc.length);
+        // System.out.println("length of packet" + recc.length);
         byte[] header = Arrays.copyOfRange(recc, 0, 12);
-        System.out.println("rawdata:" + recc);
+        // System.out.println("rawdata:" + recc);
 
         int seqNum = PacketProcessor.getIntSeqNum(header);
         int ackNum = PacketProcessor.getIntAckNum(header);
         int dataLen = PacketProcessor.getDataLength(header);
         int checksum = PacketProcessor.getCheckSum(header);
 
-        System.out.println("seqNum: " + seqNum);
-        System.out.println("ackNum: " + ackNum);
-        System.out.println("dataLenLen: " + dataLen);
-        System.out.println("checksum: " + checksum);
+        // System.out.println("seqNum: " + seqNum);
+        // System.out.println("ackNum: " + ackNum);
+        // System.out.println("dataLenLen: " + dataLen);
+        // System.out.println("checksum: " + checksum);
 
         boolean synFlag = PacketProcessor.getSYNFlag(header);
         boolean ackFlag = PacketProcessor.getACKFlag(header);
         boolean finFlag = PacketProcessor.getFINFlag(header);
-        System.out.println("ackFlag: " + ackFlag);
-        System.out.println("synFlag: " + synFlag);
-        System.out.println("finFlag: " + finFlag);
+        // System.out.println("ackFlag: " + ackFlag);
+        // System.out.println("synFlag: " + synFlag);
+        // System.out.println("finFlag: " + finFlag);
 
         int rcvw = PacketProcessor.getrcvw(header);
 

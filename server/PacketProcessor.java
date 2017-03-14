@@ -33,15 +33,18 @@ public class PacketProcessor {
     return true;
     }
 
-    public static int makechecksum(String data){
+    public static int makechecksum(String data,int len){
         int sum = 0;
-        for (int i = 0; i <  data.length(); i++) {
+        for (int i = 0; i < len; i++) {
             char c = data.charAt(i);
-            sum = sum +  (int)(c);
+            //sum = sum +  (int)(c);
+            //System.out.println(sum);
+            System.out.println((int)(c));
             if (sum > 0xFFFF){
                 sum = (sum + 1) & (0x0000FFFF);
             }
         }
+        System.out.println(len);
         return sum;
     }
 
@@ -88,7 +91,7 @@ public class PacketProcessor {
     }
 
     public static int getrcvw(byte[] b) {
-      int rcvw = b[11] & 0xF;
+      int rcvw = b[11] & 0xFF;
       return rcvw;
     }
 
