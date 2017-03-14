@@ -1,5 +1,6 @@
 import java.net.*;
 import java.io.*;
+<<<<<<< Updated upstream
 import java.net.DatagramPacket;
 import java.util.Scanner;
 import java.util.Iterator;
@@ -23,6 +24,33 @@ public class Server {
   private static ArrayList<DatagramPacket> pktArray;
 
   private static DatagramPacket creatReplyPacket(int seqNum,int ackNum, boolean ackFlag,boolean synFlag,boolean finFlag,int rcvw,String data ,InetAddress client_addr, int client_port) throws Exception{
+=======
+import java.util.Arrays;
+import java.util.Arraylist;
+
+public class Server {
+	int portnumber;
+	DatagramSocket serversocket;
+	DatagramPacket received_packet;
+	PacketProcessor pp = new PacketProcessor();
+  int sequenceSize = pow(2,16);
+  int windowSize = sequenceSize/2;
+  boolean[] sendSeqArray = new boolean[windowSize];
+  initializeWindow(sendSeqArray);
+  int head = 0;
+  int end = windowSize;
+  int lastAck = 0;
+  ArrayList<long> timeArray;
+  ArrayList<DatagramPacket> pktArray;
+
+  private static void initializeWindow(boolean[] array) {
+    for (int i = 0; i < array.length; i++) {
+      array[i] = false;
+    }
+  }
+
+	private static DatagramPacket creatReplyPacket(int seqNum,int ackNum, boolean ackFlag,boolean synFlag,boolean finFlag,int rcvw,String data ,InetAddress client_addr, int client_port) throws Exception{
+>>>>>>> Stashed changes
     DatagramPacket sent_packet = new DatagramPacket(new byte[1024],1024,client_addr,client_port);
     int dataLen = data.length();
     int checksum = PacketProcessor.makechecksum(data);
