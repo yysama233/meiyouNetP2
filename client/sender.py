@@ -61,8 +61,10 @@ class Window(object):
 				response,serAdd = sock.recvfrom(1000)
 				print "received ack"
 				resPack = self.decode(response)
+
 				if (resPack.ack_num == 0 and resPack.ack_flag == 1 and resPack.syn_flag == 1):
 					self.sock = sock
+					self.sendWinSize = resPack.mrws
 					return True
 			except:
 				print("retry connect...")
@@ -93,7 +95,7 @@ class Window(object):
 		self.lastSequence = (self.lastSequence + 1) % self.sequenceSize
 		try:
 			self.sock.sendto(pktMsg,(self.serHost,self.serPort))
-			
+			self.sendWinSize -= 1
 			return pkt.datalen
 		except:
 			return 0
@@ -118,6 +120,7 @@ class Window(object):
 				except:
 					pass
 				if not (self.sendArray[sendPkt.seq_num]):
+					self.sendWinSize += 1
 					self.sendArray[sendPkt.seq_num] = True
 					self.rcvBuffer.insert(sendPkt.seq_num,rcvPkt.data)
 					self.moveToNext()
@@ -315,7 +318,7 @@ def transfer(fileName,cliWin):
 	cliWin.isFinished = False
 	cliWin.sock.settimeout(0.01)
 	while (data or not cliWin.isFinished):
-		if (data and cliWin.windowFree()):
+		if (data and cliWin.windowFree() and cliWin.sendWinSize):
 			print "send:\n "+ data
 			size = cliWin.sendPkt(data)
 			transferred += size
