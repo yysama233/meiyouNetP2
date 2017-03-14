@@ -260,14 +260,7 @@ class Window(object):
     def finishTransfer(self):
         print "file " + self.rcvFile + "is downloaded"
         self.rcvWrite.close()
-        self.sequenceSize = pow(2,sequenceBit)
-        self.windowSize = self.sequenceSize/2
-        self.sendArray = [False] * self.sequenceSize
-        self.pktArray = [False] * self.sequenceSize
-        self.timerArray = [False] * self.sequenceSize 
-        self.head = 0
-        self.end = self.windowSize
-        self.lastSequence = 0
+
 
 SEQUENCE_BIT = 16
 TIMEOUT = 2 #seconds
