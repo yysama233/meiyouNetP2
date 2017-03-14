@@ -63,11 +63,26 @@ public class Server {
           System.out.println("synFlag: " + synFlag);
           System.out.println("finFlag: " + finFlag);
           DatagramPacket reply = createReplyPacket(seqNum, ackNum, ackFlag, synFlag, finFlag, rcvw, data, client_addr, client_port);
-          serverSocket.send(reply);
+          serversocket.send(reply);
           System.out.println("Syn&Ack sent! Connection setup.");
       } catch (Exception e) {
         System.out.println("Connection message sent failure.");
       }
+  }
+
+  private static void terminate(int seqNum,int ackNum,boolean ackFlag,boolean synFlag,boolean finFlag,int rcvw,String data, InetAddress client_addr, int client_port, DatagramSocket serverSocket) {
+      try {
+          System.out.println("ackFlag: " + ackFlag);
+          System.out.println("synFlag: " + synFlag);
+          System.out.println("finFlag: " + finFlag);
+          DatagramPacket reply = createReplyPacket(seqNum, ackNum, ackFlag, synFlag, finFlag, rcvw, data, client_addr, client_port);
+          serversocket.send(reply);
+          System.out.println("Fin&Ack sent! Connection Terminated....");
+          System.out.println("But as a Server, i will not terminate");
+      } catch (Exception e) {
+        System.out.println("The disconnection has been aborted...");
+      }
+
   }
 
   private static void sendData(int seqNum,int ackNum,boolean ackFlag,boolean synFlag,boolean finFlag,int rcvw,String data, InetAddress client_addr, int client_port, DatagramSocket serverSocket) {
@@ -87,6 +102,7 @@ public class Server {
     //
   }
 
+
   private static String findState(boolean synFlag, boolean ackFlag, boolean finFlag, String data) {
     if (synFlag && !ackFlag && !finFlag) {
         return "ConnRequest";
@@ -97,7 +113,7 @@ public class Server {
       } else {
           return "ConnSetup.";
       }
-    } else if (finFlag && !synFlag && ackFlag) {
+    } else if (finFlag && !synFlag) {
         return "Disconnect";
     } else {
         return "wtf";
@@ -132,7 +148,7 @@ public class Server {
 
     try {
     //initiate the server socket
-		  DatagramSocket serverSocket = new DatagramSocket(portnumber);
+		  DatagramSocket serversocket = new DatagramSocket(portnumber);
       System.out.println("serverSocket is created, waiting for response");
       byte[] buf = new byte[1024];
       DatagramPacket received_packet = new DatagramPacket(buf, buf.length);
@@ -141,7 +157,7 @@ public class Server {
         
         //read and decode data from the client
 
-        serverSocket.receive(received_packet);
+        serversocket.receive(received_packet);
         InetAddress client_addr = received_packet.getAddress();
         int client_port = received_packet.getPort();
 
@@ -183,9 +199,10 @@ public class Server {
                 // here the seqNum of reply = acknum of the client
                 // the acknum of reply = seqNum + dataLen
                 // we want to reply ack = true and syn = true, fin = false;
-                handshake(ackNum, 0, true, true, false, rcvw, "MEISHAONVNIHAO", client_addr, client_port, serverSocket);
-            case "ConnSetup" :
-              continue;
+              private static void handshake(int seqNum,int ackNum,boolean ackFlag,boolean synFlag,boolean finFlag,int rcvw,String data, InetAddress client_addr, int client_port, DatagramSocket serverSocket) {
+                handshake(ackNum, 0, true, true, false, rcvw, "MEISHAONVNIHAO", client_addr, client_port, serversocket);
+            case "Disconnect" :
+                terminate(ackNum, 0, false, false, true, rcvw, "ByeByeMeishaonv", client_addr, client_port, serversocket);
               // don't know what to do yet
             case "TransferData":
               continue;
