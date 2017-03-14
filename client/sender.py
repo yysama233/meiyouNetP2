@@ -60,7 +60,7 @@ class Window(object):
 		for i in range(0,3):
 			sock.sendto(synMsg,(self.serHost,self.serPort))
 			try:
-				response,serAdd = sock.recvfrom(2048)
+				response,serAdd = sock.recvfrom(1000)
 				print "received ack"
 				resPack = self.decode(response)
 				if (resPack.ack_num == 0 and resPack.ack_flag == 1 and resPack.syn_flag == 1):
@@ -76,7 +76,7 @@ class Window(object):
 		for i in range(0,3):
 			sock.sendto(finMsg,(self.serHost,self.serPort))
 			try:
-				response,serAdd = sock.recvfrom(2048)
+				response,serAdd = sock.recvfrom(1000)
 				resPack = self.decode(response)
 				if (resPack.ack_num == 0 and resPack.fin_flag == 1 and resPack.ack_flag == 1):
 					return True
@@ -158,14 +158,32 @@ class Window(object):
 		return self.lastSequence != self.end
 
 	def checkTimeout(self,curTime):
-		for i in range(self.head,self.end):
-			if (not self.sendArray[i]):
-				if (self.pktArray[i] and curTime - self.pktArray[i].time > 2):
-					print "resend pkt: " + str(self.pktArray[i].seq_num)
-					try:
-						self.sock.sendto(self.pktArray[i].pack(),(self.serHost,self.serPort))
-					except:
-						pass
+		if self.head < self.end:
+			for i in range(self.head,self.end):
+				if (not self.sendArray[i]):
+					if (self.pktArray[i] and curTime - self.pktArray[i].time > 2):
+						print "resend pkt: " + str(self.pktArray[i].seq_num)
+						try:
+							self.sock.sendto(self.pktArray[i].pack(),(self.serHost,self.serPort))
+						except:
+							pass
+		else:
+			for i in range(self.head,self.sequenceSize):
+				if (not self.sendArray[i]):
+					if (self.pktArray[i] and curTime - self.pktArray[i].time > 2):
+						print "resend pkt: " + str(self.pktArray[i].seq_num)
+						try:
+							self.sock.sendto(self.pktArray[i].pack(),(self.serHost,self.serPort))
+						except:
+							pass
+			for i in range(0,self.head):
+				if (not self.sendArray[i]):
+					if (self.pktArray[i] and curTime - self.pktArray[i].time > 2):
+						print "resend pkt: " + str(self.pktArray[i].seq_num)
+						try:
+							self.sock.sendto(self.pktArray[i].pack(),(self.serHost,self.serPort))
+						except:
+							pass
 
 
 
@@ -232,7 +250,7 @@ def transfer(fileName,cliWin):
 			return
 
 		try:
-			ackMsg,addr = sock.recvfrom(2048)
+			ackMsg,addr = sock.recvfrom(1000)
 			receivedSize = cliWin.recMsg(ackMsg)
 			recevived += receivedSize
 		except:
