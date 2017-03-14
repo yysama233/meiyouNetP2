@@ -61,8 +61,10 @@ class Window(object):
                 response,serAdd = sock.recvfrom(1000)
                 print "received ack"
                 resPack = self.decode(response)
+
                 if (resPack.ack_num == 0 and resPack.ack_flag == 1 and resPack.syn_flag == 1):
                     self.sock = sock
+                    self.sendWinSize = resPack.mrws
                     return True
             except:
                 print("retry connect...")
@@ -93,7 +95,7 @@ class Window(object):
         self.lastSequence = (self.lastSequence + 1) % self.sequenceSize
         try:
             self.sock.sendto(pktMsg,(self.serHost,self.serPort))
-            
+            self.sendWinSize -= 1
             return pkt.datalen
         except:
             return 0
@@ -118,6 +120,7 @@ class Window(object):
                 except:
                     pass
                 if not (self.sendArray[sendPkt.seq_num]):
+                    self.sendWinSize += 1
                     self.sendArray[sendPkt.seq_num] = True
                     self.rcvBuffer.insert(sendPkt.seq_num,rcvPkt.data)
                     self.moveToNext()
@@ -183,86 +186,6 @@ class Window(object):
                         except:
                             pass
 
-    def cliConnect(self):
-        sock = socket(AF_INET,SOCK_DGRAM)
-        synPack = Packet('Hello',0,0,(0,1,0),self.mrws)
-        synMsg = synPack.pack()
-        #print synMsg[12:]
-        sock.settimeout(2)
-        for i in range(0,3):
-            sock.sendto(synMsg,(self.serHost,self.serPort))
-            try:
-                response,serAdd = sock.recvfrom(2048)
-                print "received ack"
-                resPack = self.decode(response)
-                if (resPack.ack_num == 0 and resPack.ack_flag == 1 and resPack.syn_flag == 1):
-                    self.sock = sock
-                    return True
-            except:
-                print("retry connect...")
-        return False
-
-    def disConnect(self):
-        finPack = Packet("Bye",0,0,(0,0,1),0)
-        finMsg = finPack.pack()
-        self.sock.settimeout(2)
-        for i in range(0,3):
-            sock.sendto(finMsg,(self.serHost,self.serPort))
-            try:
-                response,serAdd = sock.recvfrom(2048)
-                resPack = self.decode(response)
-                if (resPack.ack_num == 0 and resPack.fin_flag == 1 and resPack.ack_flag == 1):
-                    return True
-            except:
-                print("retry disconnect...")
-        return False
-    def setRevFile(self,fileName):
-        Name,fileType = fileName.split('.')
-        self.rcvFile = Name + '-received'+'.'+fileType
-        self.rcvWrite = open(self.rcvFile,'w')
-    def sendPkt(self,data):
-        pkt = Packet(data,self.lastSequence,0,(0,0,0),self.mrws)
-        pktMsg = pkt.pack()
-        self.pktArray.insert(pkt.seq_num,pkt)
-        self.timerArray.insert(pkt.seq_num,time())
-        self.lastSequence = (self.lastSequence + 1) % self.sequenceSize
-        try:
-            self.sock.sendto(pktMsg,(self.serHost,self.serPort))
-            
-            return pkt.datalen
-        except:
-            return 0
-    def moveToNext(self):
-        while(self.sendArray[self.head]):
-            #self.send_pkt(self.end)
-            self.rcvWrite(self.rcvBuffer[self.head])
-            self.head = (self.head + 1) % self.sequenceSize
-            self.end = (self.end + 1) %self.sequenceSize
-            self.sendArray[self.end] = False
-    def rcvMsg(self,ackMsg):
-        rcvPkt = self.decode(ackMsg)
-        rcvChkSum = rcvPkt.makecheksum(rcvPkt.data)
-        if (rcvChkSum != rcvPkt.chksum):
-            return 0
-        if (rcvPkt.ack_flag):
-            sendPkt = self.pktArray[rcvPkt.ack_num]
-            if (sendPkt):
-                rcvAckPkt = Packet("ack",0,sendPkt.seq_num,(1,0,0),0)
-                try:
-                    self.sock.sendto(rcvAckPkt.pack(),(self.serHost,self.serPort))
-                except:
-                    pass
-                if not (self.sendArray[sendPkt.seq_num]):
-                    self.sendArray[sendPkt.seq_num] = True
-                    self.rcvBuffer.insert(sendPkt.seq_num,rcvPkt.data)
-                    self.moveToNext()
-                    return len(rcvPkt.data)
-        return 0
-    def finishTransfer(self):
-        print "file " + self.rcvFile + "is downloaded"
-        self.rcvWrite.close()
-
-
 SEQUENCE_BIT = 16
 TIMEOUT = 2 #seconds
 DATA_SIZE = 2000
@@ -316,7 +239,7 @@ def transfer(fileName,cliWin):
     cliWin.isFinished = False
     cliWin.sock.settimeout(0.01)
     while (data or not cliWin.isFinished):
-        if (data and cliWin.windowFree()):
+        if (data and cliWin.windowFree() and cliWin.sendWinSize):
             print "send:\n "+ data
             size = cliWin.sendPkt(data)
             transferred += size
@@ -327,7 +250,7 @@ def transfer(fileName,cliWin):
 
         try:
             ackMsg,addr = sock.recvfrom(1000)
-            receivedSize = cliWin.recMsg(ackMsg)
+            receivedSize = cliWin.rcvMsg(ackMsg)
             recevived += receivedSize
         except:
             pass
