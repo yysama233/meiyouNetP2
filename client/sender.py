@@ -3,6 +3,7 @@ import sys
 from string import *
 import struct
 from time import time
+import string
 class Packet(object):
     def __init__(self,data,seqNum,ackNum,flags,mrws):
         self.seq_num = seqNum
@@ -13,7 +14,7 @@ class Packet(object):
         self.syn_flag = flags[1]
         self.fin_flag = flags[2]
         self.mrws = mrws
-        self.time = time
+        self.time = time()
         #self.chksum = self.makecheksum(self.data)
         self.formatString = "!HHHH???B"+ (str)(self.datalen) + "s"
     def makecheksum(self,data):
@@ -30,15 +31,13 @@ class Packet(object):
         self.chksum = self.makecheksum(self.data)
         return struct.pack(self.formatString,self.seq_num,self.ack_num,self.datalen,self.chksum,self.ack_flag,self.syn_flag,self.fin_flag,self.mrws,self.data)
 
-    def getTimeOut(self,curTime):
-        return (self.time - curTime > 2)
     
     
 class Window(object):
     def __init__(self,sequenceBit,serHost,serPort,mrws):
         self.sequenceSize = pow(2,sequenceBit)
-        self.windowSize = self.sequenceSize/2
-        self.sendSeqArray = [False] * self.sequenceSize
+        self.windowSize = pow(2,10)
+        self.sendArray = [False] * self.sequenceSize
         self.pktArray = [False] * self.sequenceSize
         self.timerArray = [False] * self.sequenceSize 
         self.head = 0
@@ -91,8 +90,8 @@ class Window(object):
     def sendPkt(self,data):
         pkt = Packet(data,self.lastSequence,0,(0,0,0),self.mrws)
         pktMsg = pkt.pack()
-        self.pktArray.insert(pkt.seqNum,pkt)
-        self.timerArray.insert(pkt.seqNum,time())
+        self.pktArray.insert(pkt.seq_num,pkt)
+        self.timerArray.insert(pkt.seq_num,time())
         self.lastSequence = (self.lastSequence + 1) % self.sequenceSize
         try:
             self.sock.sendto(pktMsg,(self.serHost,self.serPort))
@@ -131,7 +130,7 @@ class Window(object):
         self.rcvWrite.close()
         self.sequenceSize = pow(2,sequenceBit)
         self.windowSize = self.sequenceSize/2
-        self.sendSeqArray = [False] * self.sequenceSize
+        self.sendArray = [False] * self.sequenceSize
         self.pktArray = [False] * self.sequenceSize
         self.timerArray = [False] * self.sequenceSize 
         self.head = 0
@@ -158,11 +157,11 @@ class Window(object):
     def windowFree(self):
         return self.lastSequence != self.end
 
-    def checkTimeout(self):
+    def checkTimeout(self,curTime):
         for i in range(self.head,self.end):
             if (not self.sendArray[i]):
-                if self.pktArray[i].getTimeOut(time()):
-                    print "resend pkt: " + self.pktArray[i].seq_num
+                if (self.pktArray[i] and curTime - self.pktArray[i].time > 2):
+                    print "resend pkt: " + str(self.pktArray[i].seq_num)
                     try:
                         self.sock.sendto(self.pktArray[i].pack(),(self.serHost,self.serPort))
                     except:
@@ -182,12 +181,15 @@ def istext(filename):
         sys.exit()
     text_characters = "".join(map(chr,range(32,127)) + list("\n\r\t\b"))
     null_trans = string.maketrans("","")
+    #empty file is considered text file
     if not s:
         f.close()
         return True
+    #file with \0 is usually binary file
     if "\0" in s:
         return False
     t=s.translate(null_trans,text_characters)
+    #string with more than 30% binary characters are considered binary file
     if float(len(t))/float(len(s))>0.3:
         return False
     f.close()
@@ -197,8 +199,9 @@ def checkFile(fileName):
         print ("Binary File")
         return False
     try:
-        f = open(fileNamem,'r')
+        f = open(fileName,'r')
     except:
+
         return False
     f.close()
     return True
@@ -220,10 +223,11 @@ def transfer(fileName,cliWin):
     cliWin.sock.settimeout(0.01)
     while (data or not cliWin.isFinished):
         if (data and cliWin.windowFree()):
+            print "send:\n "+ data
             size = cliWin.sendPkt(data)
             transferred += size
             data = f.read(DATA_SIZE)
-        elif (transferred == recevived):
+        elif (transferred == received):
             cliWin.finishTransfer()
             return
 
@@ -231,9 +235,10 @@ def transfer(fileName,cliWin):
             ackMsg,addr = sock.recvfrom(2048)
             receivedSize = cliWin.recMsg(ackMsg)
             recevived += receivedSize
-        except socket.timeout as e:
+        except:
             pass
-        cliWin.checkTimeout()
+        curTime = time()
+        cliWin.checkTimeout(curTime)
     return None
 def disconnect():
     return cliWin.disConnect()
@@ -245,9 +250,9 @@ def clientStart(argv):
     serHost,serPort = argv[1].split(':')
     mrws = int(argv[2])
     cliWin = connect(serHost,int(serPort),mrws)
-
+    
     while(True):
-        command = input("please input command:\n")
+        command = raw_input("please input command:")
         commandList = command.split()
         if (len(commandList) > 1):
             if (commandList[0] == 'transfer' and len(commandList) == 2):
