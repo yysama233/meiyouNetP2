@@ -17,11 +17,11 @@ import java.math.*;
  * Call: java smsengine [Portnumber] [suspicious words] to initiate server
  */
 public class Server {
-  private static int portnumber;
-  private static DatagramSocket serversocket;
-  private static DatagramPacket received_packet;
   private static PacketProcessor pp = new PacketProcessor();
-  private static int sequenceSize = (int)Math.pow(2,16);
+  private static int portnumber;
+  private static DatagramSocket serverSocket;
+  private static DatagramPacket received_packet;
+  private final static int sequenceSize = (int)Math.pow(2,16);
   private static int windowSize = sequenceSize/2;
   private static boolean[] sendSeqArray = new boolean[windowSize];
   private static int head = 0;
@@ -29,6 +29,47 @@ public class Server {
   private static int lastAck = 0;
   private static ArrayList<Long> timeArray;
   private static ArrayList<DatagramPacket> pktArray;
+  private static int recvWindowSize;
+  
+  /**
+   ** Server Constructor
+   **/
+  public Server(String args[]) {
+    //Check command line input length
+    if (args.length != 2) {
+      System.out.println("Invalid input."
+       + " Sample input would be java smsengineUDP <port number> <receive window size>");
+         return;
+    }
+
+    //Check the validity of port number input
+    try {
+      portnumber = Integer.parseInt(args[0]);
+    } catch (NumberFormatException e) {
+      System.out.println("Invalid port number is given.");
+      return;
+    }
+
+    try {
+      recvWindowSize = Integer.parseInt(args[1]);
+    } catch (NumberFormatException e) {
+      System.out.println("Invalid recvWindowSize is given.");
+      return;
+    }
+
+    if (portnumber <= 1024 || portnumber > 65536) {
+      System.out.println("Port number should be between 1024 and 65536.");
+      return;
+    }
+
+    try {
+      serverSocket = new DatagramSocket(portnumber);
+      System.out.println("serverSocket is created, waiting for response");
+    } catch (SocketException e) {
+      System.out.println(e.getMessage());
+    }
+
+  }
 
   //TODO need to check time instance
   private static List<Long> checktimeout() {
@@ -46,12 +87,21 @@ public class Server {
     //dunno
   }
 
-  private static DatagramPacket createReplyPacket(int seqNum,int ackNum, boolean ackFlag,boolean synFlag,boolean finFlag,int rcvw,String data ,InetAddress client_addr, int client_port) throws Exception{
+  private static DatagramPacket createReplyPacket(int seqNum,int ackNum, boolean ackFlag,boolean synFlag,boolean finFlag,int rcvw,String data ,InetAddress client_addr, int client_port) throws IOException, NullPointerException{
       DatagramPacket sent_packet = new DatagramPacket(new byte[1000], 1000, client_addr, client_port);
       int dataLen = data.length();
+      System.out.println("-------------------------------Sent--------------------------------");
+      System.out.println("seqNum: " + seqNum);
+      System.out.println("ackNum: " + ackNum);
+      System.out.println("ackFlag: " + ackFlag);
+      System.out.println("synFlag: " + synFlag);
+      System.out.println("finFlag: " + finFlag);
+      System.out.println("dataLen:" + dataLen);
+      System.out.println("data: " + data);
       int checksum = PacketProcessor.makechecksum(data,dataLen);
-      System.out.println("checksum" + checksum);
+      System.out.println("checksum: " + checksum);
       byte[] reply = PacketProcessor.pack(seqNum, ackNum, dataLen, checksum, ackFlag, synFlag, finFlag, rcvw, data);
+
       sent_packet.setData(reply);
       sent_packet.setLength(reply.length);
       return sent_packet;
@@ -60,32 +110,31 @@ public class Server {
   private static void handshake(int seqNum,int ackNum,boolean ackFlag,boolean synFlag,boolean finFlag,int rcvw,String data, InetAddress client_addr, int client_port, DatagramSocket serverSocket) {
       // send an syn&ack packet back to the client
       try {
-
           DatagramPacket reply = createReplyPacket(seqNum, ackNum, ackFlag, synFlag, finFlag, rcvw, data, client_addr, client_port);
           serverSocket.send(reply);
           System.out.println("Syn&Ack sent! Connection setup.");
+      } catch (IOException e) {
+        System.out.println("Connection message sent failure." + e);
       } catch (Exception e) {
-        System.out.println("Connection message sent failure.");
+        System.out.println("Other Connection error" + e);
       }
   }
 
   private static void sendData(int seqNum,int ackNum,boolean ackFlag,boolean synFlag,boolean finFlag,int rcvw,String data, InetAddress client_addr, int client_port, DatagramSocket serverSocket) {
 
     try {
-      System.out.println("seqNum: " + seqNum);
-      System.out.println("ackNum: " + ackNum);
-      System.out.println("ackFlag: " + ackFlag);
-      System.out.println("synFlag: " + synFlag);
-      System.out.println("finFlag: " + finFlag);
       DatagramPacket reply_packet = createReplyPacket(seqNum, ackNum, ackFlag, synFlag, finFlag, rcvw, data, client_addr, client_port);
-      System.out.println(client_addr);
       // pktArray.add(reply_packet);
       // timeArray.add(System.currentTimeMillis());
       // lastAck = (lastAck + 1) % sequenceSize;
       serverSocket.send(reply_packet);
       System.out.println("data sent");
+    } catch (IOException e) {
+      System.out.println("Exeception found: data sent failure." + e);
+    } catch (NullPointerException e) {
+      System.out.println("Something wrong with the packet." + e);
     } catch (Exception e) {
-      System.out.println("Exeception found: data sent failure");
+      System.out.println("Other error when sending data." + e);
     }
   }
 
@@ -101,106 +150,100 @@ public class Server {
           return "AckRecvd";
     } else if (finFlag && !synFlag && ackFlag) {
         return "Disconnect";
-    } else if (!finFlag && !synFlag && !ackFlag){
+    } else if (!finFlag && !synFlag && !ackFlag && data.length() != 0){
         return "TransferData";
     } else {
         return "wtf";
     }
 
   }
+
 //////////////////////////////////////////main////////////////////////////////////////////
     public static void main (String[] args)  throws IOException{
+      Server server = new Server(args);
+      try {
+        //initiate the server socket
+        boolean running = true;
+        while (running) {
+          //read and decode data from the client
+          System.out.println("Server running..." + recvWindowSize);
+          byte[] buf = new byte[1000];
+          received_packet = new DatagramPacket(buf, buf.length);
+          serverSocket.receive(received_packet);
 
-    //Check command line input length
-    if (args.length != 1) {
-      System.out.println("Invalid input."
-       + " Sample input would be java smsengineUDP <port number> ");
-         return;
-    }
-    //initialize respective local variables and take in value
-    int clientportnumber;
-        int portnumber;
+          InetAddress client_addr = received_packet.getAddress();
+          int client_port = received_packet.getPort();
 
-    //Check the validity of port number input
-    try {
-      portnumber = Integer.parseInt(args[0]);
-    } catch (NumberFormatException e) {
-      System.out.println("Invalid port number is given.");
-      return;
-    }
+          byte[] recc = received_packet.getData();
 
-    if (portnumber <= 1024 || portnumber > 65536) {
-      System.out.println("Port number should be between 1024 and 65536.");
-      return;
-    }
+          System.out.println("-----------------------Received -----------------------");
+          System.out.println("length of packet" + recc.length);
+          byte[] header = Arrays.copyOfRange(recc, 0, 12);
+          System.out.println("rawdata:" + recc);
 
-    try {
-    //initiate the server socket
-      DatagramSocket serverSocket = new DatagramSocket(portnumber);
-      System.out.println("serverSocket is created, waiting for response");
-      byte[] buf = new byte[1024];
-      DatagramPacket received_packet = new DatagramPacket(buf, buf.length);
-      boolean running = true;
-      while (running) {
-        
-        //read and decode data from the client
+          int seqNum = PacketProcessor.getIntSeqNum(header);
+          int ackNum = PacketProcessor.getIntAckNum(header);
+          int dataLen = PacketProcessor.getDataLength(header);
+          int checksum = PacketProcessor.getCheckSum(header);
 
-        serverSocket.receive(received_packet);
-        InetAddress client_addr = received_packet.getAddress();
-        int client_port = received_packet.getPort();
+          System.out.println("seqNum: " + seqNum);
+          System.out.println("ackNum: " + ackNum);
+          System.out.println("dataLen: " + dataLen);
+          System.out.println("checksum: " + checksum);
 
-        byte[] recc = received_packet.getData();
-        // System.out.println("length of packet" + recc.length);
-        byte[] header = Arrays.copyOfRange(recc, 0, 12);
-        // System.out.println("rawdata:" + recc);
+          boolean synFlag = PacketProcessor.getSYNFlag(header);
+          boolean ackFlag = PacketProcessor.getACKFlag(header);
+          boolean finFlag = PacketProcessor.getFINFlag(header);
+          System.out.println("ackFlag: " + ackFlag);
+          System.out.println("synFlag: " + synFlag);
+          System.out.println("finFlag: " + finFlag);
 
-        int seqNum = PacketProcessor.getIntSeqNum(header);
-        int ackNum = PacketProcessor.getIntAckNum(header);
-        int dataLen = PacketProcessor.getDataLength(header);
-        int checksum = PacketProcessor.getCheckSum(header);
+          int rcvw = PacketProcessor.getrcvw(header);
 
-        // System.out.println("seqNum: " + seqNum);
-        // System.out.println("ackNum: " + ackNum);
-        // System.out.println("dataLenLen: " + dataLen);
-        // System.out.println("checksum: " + checksum);
+          System.out.println("rcvw: " + rcvw);
 
-        boolean synFlag = PacketProcessor.getSYNFlag(header);
-        boolean ackFlag = PacketProcessor.getACKFlag(header);
-        boolean finFlag = PacketProcessor.getFINFlag(header);
-        // System.out.println("ackFlag: " + ackFlag);
-        // System.out.println("synFlag: " + synFlag);
-        // System.out.println("finFlag: " + finFlag);
+          // if rcvw == 0, then the receiver's window is full of packets
+          if (rcvw == 0) {
+            continue;
+          }
 
-        int rcvw = PacketProcessor.getrcvw(header);
+          byte[] data = Arrays.copyOfRange(recc, 12, recc.length);
+          //System.out.println(data);
+          String clientdata = new String(data,0, data.length);
+          System.out.println("Received Data: " + clientdata);
+          System.out.println("client dataLen:" + clientdata.length());
 
-        System.out.println("rcvw: " + rcvw);
+          // Find state of the client to decide how to reply the client
+          String state = findState(synFlag, ackFlag, finFlag, clientdata);
+          System.out.println("Current State: " + state);
+          switch(state) {
+              case "ConnRequest":
+                  // here the seqNum of reply = acknum of the client
+                  // the acknum of reply = seqNum + dataLen
+                  // we want to reply ack = true and syn = true, fin = false;
+                  handshake(ackNum, 0, true, true, false, recvWindowSize, "Hello", client_addr, client_port, serverSocket);
+                  continue;
+              case "TransferData":
+                  int server_cs = PacketProcessor.makechecksum(clientdata, clientdata.length());
+                  if (server_cs == checksum) {
+                    sendData(seqNum, seqNum, true, false, false, recvWindowSize, clientdata.toUpperCase(), client_addr, client_port, serverSocket);
+                  } else {
+                    System.out.println("server checksum: " + server_cs);
+                    System.out.println("client checksum: " + checksum);
+                    System.out.println("Checksum error");
+                  }
+                  // need to mark acked
+                  continue;
+              case "Disconnect":
+                  continue;
+                  // don't know what to do yet
+          }
 
-        byte[] data = Arrays.copyOfRange(recc, 12, recc.length);
-        String clientdata = new String(data, 0, data.length);
-        System.out.println("Received Data: " + clientdata);
-
-        // Find state of the client to decide how to reply the client
-        String state = findState(synFlag, ackFlag, finFlag, clientdata);
-
-        switch(state) {
-            case "ConnRequest":
-                // here the seqNum of reply = acknum of the client
-                // the acknum of reply = seqNum + dataLen
-                // we want to reply ack = true and syn = true, fin = false;
-                handshake(ackNum, 0, true, true, false, rcvw, "MEISHAONVNIHAO", client_addr, client_port, serverSocket);
-            case "TransferData":
-                sendData(seqNum, seqNum, true, false, false, rcvw, clientdata.toUpperCase(), client_addr, client_port, serverSocket);
-                // don't know how to do yet
-            case "Disconnect":
-                continue;
-                // don't know what to do yet
         }
-
+        serverSocket.close();
+      } catch (NullPointerException e) {
+        System.out.println("Server Crash: " + e);
       }
-      serverSocket.close();
-    } catch (BindException e) {
-      System.out.println("the port has already been bound");
-    }
 
   }
 }
