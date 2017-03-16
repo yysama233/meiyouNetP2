@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.math.*;
+import java.util.Base64;  
 
 /**
  * @author Yufeng Wang
@@ -208,8 +209,8 @@ public class Server {
           }
 
           byte[] data = Arrays.copyOfRange(recc, 12, recc.length);
-          //System.out.println(data);
-          String clientdata = new String(data,0, data.length);
+          String clientdata = new String(data, 0, dataLen > data.length ? data.length: dataLen);
+          System.out.println("data.length:" + data.length);
           System.out.println("Received Data: " + clientdata);
           System.out.println("client dataLen:" + clientdata.length());
 
@@ -231,6 +232,7 @@ public class Server {
                     System.out.println("server checksum: " + server_cs);
                     System.out.println("client checksum: " + checksum);
                     System.out.println("Checksum error");
+                    return;
                   }
                   // need to mark acked
                   continue;
