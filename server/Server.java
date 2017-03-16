@@ -144,7 +144,12 @@ public class Server {
       try {
           DatagramPacket reply = createReplyPacket(seqNum, ackNum, ackFlag, synFlag, finFlag, rcvw, data, client_addr, client_port);
           serverSocket.send(reply);
-          System.out.println("Syn&Ack sent! Connection setup.");
+          if (finFlag) {
+            System.out.println("Fin&Ack sent! Connection with client" + client_addr +"shut down.");
+          } else {
+            System.out.println("Syn&Ack sent! Connection setup.");
+          }
+
       } catch (IOException e) {
         System.out.println("Connection message sent failure." + e);
       } catch (Exception e) {
