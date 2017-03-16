@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.math.*;
-import java.util.Base64;  
+
 
 /**
  * @author Yufeng Wang
@@ -22,16 +22,8 @@ public class Server {
   private static int portnumber;
   private static DatagramSocket serverSocket;
   private static DatagramPacket received_packet;
-  private final static int sequenceSize = (int)Math.pow(2,16);
-  private static int windowSize = sequenceSize/2;
-  private static boolean[] sendSeqArray = new boolean[windowSize];
-  private static int head = 0;
-  private static int end = windowSize;
+  private static Window recvWindow;
   private static int lastAck = 0;
-  private static ArrayList<Long> timeArray;
-  private static ArrayList<DatagramPacket> pktArray;
-  private static int recvWindowSize;
-  
   /**
    ** Server Constructor
    **/
@@ -45,18 +37,20 @@ public class Server {
 
     //Check the validity of port number input
     try {
-      portnumber = Integer.parseInt(args[0]);
+      this.portnumber = Integer.parseInt(args[0]);
     } catch (NumberFormatException e) {
       System.out.println("Invalid port number is given.");
       return;
     }
 
     try {
-      recvWindowSize = Integer.parseInt(args[1]);
+      int recvWindowSize = Integer.parseInt(args[1]);
+      this.recvWindow = new Window(recvWindowSize);
     } catch (NumberFormatException e) {
       System.out.println("Invalid recvWindowSize is given.");
       return;
     }
+
 
     if (portnumber <= 1024 || portnumber > 65536) {
       System.out.println("Port number should be between 1024 and 65536.");
@@ -64,28 +58,65 @@ public class Server {
     }
 
     try {
-      serverSocket = new DatagramSocket(portnumber);
+      this.serverSocket = new DatagramSocket(portnumber);
       System.out.println("serverSocket is created, waiting for response");
     } catch (SocketException e) {
       System.out.println(e.getMessage());
     }
+  }
 
+  public Window getWindow() {
+    return this.recvWindow;
+  }
+
+  public void refreshWindow(int size) {
+    this.recvWindow = new Window(size);
   }
 
   //TODO need to check time instance
-  private static List<Long> checktimeout() {
-    List<Long> tosend = new ArrayList<>();
+  private static void checktimeout(Window win) {
     long curtime = System.currentTimeMillis();
-    for (long i : timeArray) {
-      if (i - curtime > 2) {
-        tosend.add(i);
+    int start = win.start;
+    int end = win.end;
+    int seqsize = win.getSequenceSize();
+    System.out.println("time out checking!!!");
+    if (start < end) {
+      for (int i = start; i < end && win.getpacket(i) != null; i++) {
+        check_resend(win, curtime, i);
+      }
+    } else {
+      for (int i = start; i < seqsize && win.getpacket(i) != null; i++) {
+        check_resend(win, curtime, i);
+      }
+
+      for (int i = 0; i < end && win.getpacket(i) != null; i++) {
+        check_resend(win, curtime, i);
       }
     }
-    return tosend;
+    return;
   }
 
-  private static void moveToNext() {
-    //dunno
+  // helper method for timeout 
+  private static void check_resend(Window win,long curtime,int i) {
+    Long temp_time = win.gettimer(i);
+    DatagramPacket cur_pkt = win.getpacket(i);
+    if (temp_time == null || cur_pkt == null) {
+      return;
+    }
+    if (curtime - temp_time >= 200) {
+      System.out.println("Packet Resend: (ackNum)" + i);
+      try {
+        serverSocket.send(cur_pkt);
+      } catch (IOException e) {
+        System.out.println("IOException exists!");
+      } catch (NullPointerException e) {
+        System.out.println("Something wrong with packet!");
+      } catch (Exception e) {
+        System.out.println("Other errors when resending packets.");
+      }
+
+    }
+    return;
   }
 
   private static DatagramPacket createReplyPacket(int seqNum,int ackNum, boolean ackFlag,boolean synFlag,boolean finFlag,int rcvw,String data ,InetAddress client_addr, int client_port) throws IOException, NullPointerException{
@@ -121,7 +152,7 @@ public class Server {
       }
   }
 
-  private static void sendData(int seqNum,int ackNum,boolean ackFlag,boolean synFlag,boolean finFlag,int rcvw,String data, InetAddress client_addr, int client_port, DatagramSocket serverSocket) {
+  private static void sendData(Window win, int seqNum,int ackNum,boolean ackFlag,boolean synFlag,boolean finFlag,int rcvw,String data, InetAddress client_addr, int client_port, DatagramSocket serverSocket) {
 
     try {
       DatagramPacket reply_packet = createReplyPacket(seqNum, ackNum, ackFlag, synFlag, finFlag, rcvw, data, client_addr, client_port);
@@ -129,6 +160,7 @@ public class Server {
       // timeArray.add(System.currentTimeMillis());
       // lastAck = (lastAck + 1) % sequenceSize;
       serverSocket.send(reply_packet);
+      win.addpacket(seqNum, reply_packet);
       System.out.println("data sent");
     } catch (IOException e) {
       System.out.println("Exeception found: data sent failure." + e);
@@ -139,17 +171,13 @@ public class Server {
     }
   }
 
-  private static void disconnect_client(InetAddress client_addr, int client_port) {
-    //
-  }
-
   private static String findState(boolean synFlag, boolean ackFlag, boolean finFlag, String data) {
     if (synFlag && !ackFlag && !finFlag) {
         return "ConnRequest";
         // after this case all other cases are yy and can be changed as you wish!
     } else if (!synFlag && ackFlag && !finFlag) {
           return "AckRecvd";
-    } else if (finFlag && !synFlag && ackFlag) {
+    } else if (finFlag && !synFlag && !ackFlag) {
         return "Disconnect";
     } else if (!finFlag && !synFlag && !ackFlag && data.length() != 0){
         return "TransferData";
@@ -162,12 +190,19 @@ public class Server {
 //////////////////////////////////////////main////////////////////////////////////////////
     public static void main (String[] args)  throws IOException{
       Server server = new Server(args);
+      Window recvWindow =  server.getWindow();
       try {
         //initiate the server socket
         boolean running = true;
         while (running) {
           //read and decode data from the client
-          System.out.println("Server running..." + recvWindowSize);
+          System.out.println("Server running...");
+
+          if (recvWindow.isfull()) {
+            System.out.println("server receive window is full!!!");
+            continue;
+          }
+
           byte[] buf = new byte[1000];
           received_packet = new DatagramPacket(buf, buf.length);
           serverSocket.receive(received_packet);
@@ -202,11 +237,12 @@ public class Server {
           int rcvw = PacketProcessor.getrcvw(header);
 
           System.out.println("rcvw: " + rcvw);
-
+          int recvWindowSize = recvWindow.getfreewindow();
+          System.out.println("server free window: " + recvWindowSize);
           // if rcvw == 0, then the receiver's window is full of packets
-          if (rcvw == 0) {
-            continue;
-          }
+          // if (rcvw == 0) {
+          //   continue;
+          // }
 
           byte[] data = Arrays.copyOfRange(recc, 12, recc.length);
           String clientdata = new String(data, 0, dataLen > data.length ? data.length: dataLen);
@@ -217,34 +253,54 @@ public class Server {
           // Find state of the client to decide how to reply the client
           String state = findState(synFlag, ackFlag, finFlag, clientdata);
           System.out.println("Current State: " + state);
+
           switch(state) {
               case "ConnRequest":
                   // here the seqNum of reply = acknum of the client
                   // the acknum of reply = seqNum + dataLen
                   // we want to reply ack = true and syn = true, fin = false;
-                  handshake(ackNum, 0, true, true, false, recvWindowSize, "Hello", client_addr, client_port, serverSocket);
+                  handshake(ackNum, 0, true, true, false,recvWindowSize, "Hello", client_addr, client_port, serverSocket);
                   continue;
               case "TransferData":
                   int server_cs = PacketProcessor.makechecksum(clientdata, clientdata.length());
                   if (server_cs == checksum) {
-                    sendData(seqNum, seqNum, true, false, false, recvWindowSize, clientdata.toUpperCase(), client_addr, client_port, serverSocket);
+                    sendData(recvWindow,seqNum, seqNum, true, false, false, recvWindowSize, clientdata.toUpperCase(), client_addr, client_port, serverSocket);
                   } else {
                     System.out.println("server checksum: " + server_cs);
                     System.out.println("client checksum: " + checksum);
                     System.out.println("Checksum error");
                     return;
                   }
-                  // need to mark acked
+
+                  // update last packet received
+                  recvWindow.setLastAck(seqNum);
+                  int lastAck = recvWindow.lastack();
+                  System.out.println("Last acked num" + lastAck);
+                  continue;
+
+              case "AckRecvd":
+                  // mark acked
+                  try {
+                    recvWindow.ackpacket(ackNum);
+                    recvWindowSize = recvWindow.getfreewindow();
+                    System.out.println("server free window: " + recvWindowSize);
+                  } catch (Exception iooe) {
+                    System.out.println("Error occurs during ack packet and moving window.");
+                  }
                   continue;
               case "Disconnect":
+                  handshake(ackNum,0, true, false, true, recvWindowSize, "Bye", client_addr, client_port, serverSocket);
                   continue;
                   // don't know what to do yet
           }
+          checktimeout(recvWindow);
 
         }
         serverSocket.close();
       } catch (NullPointerException e) {
         System.out.println("Server Crash: " + e);
+      } catch (Exception e) {
+        System.out.println("Server crashes with other errors: " + e);
       }
 
   }
