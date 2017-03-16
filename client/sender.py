@@ -75,9 +75,9 @@ class Window(object):
         finMsg = finPack.pack()
         self.sock.settimeout(2)
         for i in range(0,3):
-            sock.sendto(finMsg,(self.serHost,self.serPort))
+            self.sock.sendto(finMsg,(self.serHost,self.serPort))
             try:
-                response,serAdd = sock.recvfrom(1000)
+                response,serAdd = self.sock.recvfrom(1000)
                 resPack = self.decode(response)
                 if (resPack.ack_num == 0 and resPack.fin_flag == 1 and resPack.ack_flag == 1):
                     return True
@@ -119,7 +119,6 @@ class Window(object):
             print rcvChkSum
             print rcvPkt.chksum
             print "check sum error"
-        
             return 0
         if (rcvPkt.ack_flag):
             sendPkt = self.pktArray[rcvPkt.ack_num]
@@ -268,9 +267,9 @@ def transfer(fileName,cliWin):
             #print "time out"
             pass
         curTime = time()
-        #cliWin.checkTimeout(curTime)
+        cliWin.checkTimeout(curTime)
     return None
-def disconnect():
+def disconnect(cliWin):
     return cliWin.disConnect()
 
 def clientStart(argv):
@@ -284,7 +283,7 @@ def clientStart(argv):
     while(True):
         command = raw_input("please input command:")
         commandList = command.split()
-        if (len(commandList) > 1):
+        if (len(commandList) >= 1):
             if (commandList[0] == 'transfer' and len(commandList) == 2):
                 fileName = commandList[1]
                 if (checkFile(fileName)):
@@ -292,7 +291,7 @@ def clientStart(argv):
                 else:
                     print ("Invlid file name")
             elif (commandList[0] == 'disconnect' and len(commandList) == 1):
-                    if (disconnect()):
+                    if (disconnect(cliWin)):
                         print "successfully end connection"
                         break
                     else:
