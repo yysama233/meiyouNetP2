@@ -11,7 +11,7 @@ import java.math.*;
 
 
 /**
- * @author Yufeng Wang
+ * @author Yufeng Wang, Mingjun Xie
  * @version 1.0
  * the UDP Server that read the suspicious_words file, receive msg file from client, 
  * calculate the spam score and pass results back to the client
