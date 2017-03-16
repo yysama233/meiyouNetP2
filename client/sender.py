@@ -17,18 +17,19 @@ class Packet(object):
         self.time = time()
         #self.chksum = self.makecheksum(self.data)
         self.formatString = "!HHHH???B"+ (str)(self.datalen) + "s"
-    def makecheksum(self,data):
+    def makecheksum(self,data,datalen):
         sum = 0
-        for i in range(len(data)):
+        print datalen
+        for i in range(datalen):
             c = data[i]
-            sum = sum+ ord(c) 
+            sum = sum+ ord(c)
             if (sum > 0xFFFF):
                 sum = (sum + 1) & (0x0000FFFF)
         return sum
     def setchksum(self,checksum):
         self.chksum = checksum
     def pack(self):
-        self.chksum = self.makecheksum(self.data)
+        self.chksum = self.makecheksum(self.data,self.datalen)
         return struct.pack(self.formatString,self.seq_num,self.ack_num,self.datalen,self.chksum,self.ack_flag,self.syn_flag,self.fin_flag,self.mrws,self.data)
     
 class Window(object):
@@ -96,20 +97,29 @@ class Window(object):
         try:
             self.sock.sendto(pktMsg,(self.serHost,self.serPort))
             self.sendWinSize -= 1
+            print "send data ", pkt.data
             return pkt.datalen
         except:
             return 0
     def moveToNext(self):
         while(self.sendArray[self.head]):
             #self.send_pkt(self.end)
-            self.rcvWrite(self.rcvBuffer[self.head])
+            print "write to file"
+            print self.head
+            temp= self.rcvBuffer[self.head]
+            self.rcvWrite.write(temp)
             self.head = (self.head + 1) % self.sequenceSize
             self.end = (self.end + 1) %self.sequenceSize
             self.sendArray[self.end] = False
+            print "write finished!"
     def rcvMsg(self,ackMsg):
         rcvPkt = self.decode(ackMsg)
-        rcvChkSum = rcvPkt.makecheksum(rcvPkt.data)
+        rcvChkSum = rcvPkt.makecheksum(rcvPkt.data,rcvPkt.datalen)
         if (rcvChkSum != rcvPkt.chksum):
+            print rcvChkSum
+            print rcvPkt.chksum
+            print "check sum error"
+        
             return 0
         if (rcvPkt.ack_flag):
             sendPkt = self.pktArray[rcvPkt.ack_num]
@@ -118,30 +128,26 @@ class Window(object):
                 try:
                     self.sock.sendto(rcvAckPkt.pack(),(self.serHost,self.serPort))
                 except:
+                    print "pkt already received"
                     pass
                 if not (self.sendArray[sendPkt.seq_num]):
+                    print "new pkt"
                     self.sendWinSize += 1
                     self.sendArray[sendPkt.seq_num] = True
                     self.rcvBuffer.insert(sendPkt.seq_num,rcvPkt.data)
+                    print "rcv insert at%d with %s",sendPkt.seq_num,rcvPkt.data
                     self.moveToNext()
-                    return len(rcvPkt.data)
+                    return rcvPkt.datalen
         return 0
     def finishTransfer(self):
         print "file " + self.rcvFile + "is downloaded"
         self.rcvWrite.close()
-        self.sequenceSize = pow(2,sequenceBit)
-        self.windowSize = self.sequenceSize/2
-        self.sendArray = [False] * self.sequenceSize
-        self.pktArray = [False] * self.sequenceSize
-        self.timerArray = [False] * self.sequenceSize 
-        self.head = 0
-        self.end = self.windowSize
-        self.lastSequence = 0
 
 
     def decode(self,response):
         string_format = "!HHHH???B"+ (str)(len(response) - 12) + "s"
         pack = struct.unpack(string_format, response)
+        print pack
         seqNum = int(pack[0])
         ackNum = int(pack[1])
         datalen = int(pack[2])
@@ -188,7 +194,7 @@ class Window(object):
 
 SEQUENCE_BIT = 16
 TIMEOUT = 2 #seconds
-DATA_SIZE = 2000
+DATA_SIZE = 988
 def istext(filename):
     try:
         f = open(filename)
@@ -237,25 +243,32 @@ def transfer(fileName,cliWin):
     received = 0
     cliWin.setRevFile(fileName)
     cliWin.isFinished = False
-    cliWin.sock.settimeout(0.01)
+    cliWin.sock.settimeout(1)
     while (data or not cliWin.isFinished):
         if (data and cliWin.windowFree() and cliWin.sendWinSize):
             print "send:\n "+ data
             size = cliWin.sendPkt(data)
             transferred += size
             data = f.read(DATA_SIZE)
-        elif (transferred == received):
+            print "tran",transferred
+            print "received", received
+        elif (transferred <= received):
+            print "finish all"
             cliWin.finishTransfer()
             return
-
+        print "tran",transferred
+        print "received", received
         try:
-            ackMsg,addr = sock.recvfrom(1000)
+            ackMsg,addr = cliWin.sock.recvfrom(1000)
+            print "rcv MSG"
             receivedSize = cliWin.rcvMsg(ackMsg)
-            recevived += receivedSize
+            print "received Size", receivedSize
+            received += receivedSize
         except:
+            #print "time out"
             pass
         curTime = time()
-        cliWin.checkTimeout(curTime)
+        #cliWin.checkTimeout(curTime)
     return None
 def disconnect():
     return cliWin.disConnect()
