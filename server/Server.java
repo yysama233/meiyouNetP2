@@ -288,6 +288,7 @@ public class Server {
                   try {
                     recvWindow.ackpacket(ackNum);
                     recvWindowSize = recvWindow.getfreewindow();
+                    long curtime = System.currentTimeMillis();
                     System.out.println("server free window: " + recvWindowSize);
                   } catch (Exception iooe) {
                     System.out.println("Error occurs during ack packet and moving window.");
