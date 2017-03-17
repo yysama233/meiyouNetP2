@@ -1,6 +1,9 @@
 import java.net.*;
 import java.io.*;
+<<<<<<< HEAD
 <<<<<<< Updated upstream
+=======
+>>>>>>> master
 import java.net.DatagramPacket;
 import java.util.Scanner;
 import java.util.Iterator;
@@ -24,6 +27,7 @@ public class Server {
   private static ArrayList<DatagramPacket> pktArray;
 
   private static DatagramPacket creatReplyPacket(int seqNum,int ackNum, boolean ackFlag,boolean synFlag,boolean finFlag,int rcvw,String data ,InetAddress client_addr, int client_port) throws Exception{
+<<<<<<< HEAD
 =======
 import java.util.Arrays;
 import java.util.Arraylist;
@@ -51,6 +55,8 @@ public class Server {
 
 	private static DatagramPacket creatReplyPacket(int seqNum,int ackNum, boolean ackFlag,boolean synFlag,boolean finFlag,int rcvw,String data ,InetAddress client_addr, int client_port) throws Exception{
 >>>>>>> Stashed changes
+=======
+>>>>>>> master
     DatagramPacket sent_packet = new DatagramPacket(new byte[1024],1024,client_addr,client_port);
     int dataLen = data.length();
     int checksum = PacketProcessor.makechecksum(data);

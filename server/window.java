@@ -2,70 +2,121 @@ import java.util.ArrayList;
 import java.net.*;
 import java.util.Arrays;
 import java.util.*;
+import java.math.*;
 
+public class Window {
+    Long[] timer;
+    boolean[] ack;
+    DatagramPacket[] pkt;
+    int lastAck = 0;
+    int end;
+    int start;
+    int windowsize;
+    int unacked;
+    int sequenceSize = (int)Math.pow(2,16);
+    int senderWindowSize = (int)Math.pow(2,10);
 
-public class window {
-	ArrayList<Long> timer;
-	ArrayList<Boolean> ack;
-	ArrayList<DatagramPacket> pkt;
-	int end;
-	int start;
-	int windowsize;
-	int unacked;
+    public Window(int windowsize) {
+        this.windowsize = windowsize;
+        this.start = 0;
+        this.end = windowsize;
+        this.timer = new Long[sequenceSize];
+        this.ack = new boolean[sequenceSize];
+        this.pkt = new DatagramPacket[sequenceSize];
+        this.unacked = 0;
+    }
 
-	public window(int windowsize) {
-		this.windowsize = windowsize;
-		this.start = 0;
-		this.end = 0;
-		this.timer = new ArrayList<Long>();
-		this.ack = new ArrayList<Boolean>(Arrays.asList(new Boolean[windowsize]));
-		Collections.fill(ack, Boolean.FALSE);
-		this.pkt = new ArrayList<DatagramPacket>();
-		this.unacked = 0;
-	}
+    public boolean hasUnackedPkt() {
+        return unacked > 0;
+    }
+    //get packet from the window
+    public DatagramPacket getpacket(int pktnumber) {
+        return pkt[pktnumber];
+    }
 
-	//get packet from the window
-	public DatagramPacket getpacket(int pktnumber) {
-		long millisStart = Calendar.getInstance().getTimeInMillis();
-		timer.set(pktnumber, millisStart);
-		return pkt.get(pktnumber);
-	}
+    //add an unacked packet into the window
+    public void addpacket(int pktnumber, DatagramPacket packet) {
+        long millisStart = Calendar.getInstance().getTimeInMillis();
+        System.out.println(millisStart);
+        this.unacked++; // we have new unacked packet
 
-	//add an unacked packet into the window
-	public void addpacket(int pktnumber, DatagramPacket packet) {
-		ack.set(pktnumber, false);
-		pkt.set(pktnumber, packet);
-		long millisStart = Calendar.getInstance().getTimeInMillis();
-		timer.set(pktnumber, millisStart); 
-		this.unacked++;
-		this.end++;
-		this.end++;
-	}
-	//ack a packet in the window
-	public void ackpacket(int pktnumber) {
-		pkt.set(pktnumber, null);
-		ack.set(pktnumber, true);
-		timer.set(pktnumber, null);
-		this.unacked--;
-		this.start++;
-	}
+        if (this.pkt[pktnumber] != null) {
+            this.unacked--; //duplicate packet, need to send ack again
+        }
+        this.ack[pktnumber] = false;
+        this.pkt[pktnumber] = packet;
+        this.timer[pktnumber] = millisStart;
+    }
 
-	//check if windowsize if full of unacked?
-	public Boolean isfull() {
-		return unacked >= windowsize;
+    //ack a packet in the window
+    public void ackpacket(int pktnumber) {
+        if (this.pkt[pktnumber] == null) {
+            System.out.println("No such packet received.");
+            return;
+        }
+        if (!this.ack[pktnumber]) {
+            this.pkt[pktnumber] = null;
+            this.ack[pktnumber] = true;
+            this.timer[pktnumber] = null;
+            this.unacked--;
+            moveWindow();
+            System.out.println("Packet acked!");
+        }
+    }
 
-	}
-	public int getwindowsize() {
-		return  windowsize;
-	}
+    public void moveWindow() {
+        int i = this.start;
+        System.out.println("move window");
+        while (this.ack[i]) {
+            System.out.println(i);
+            this.ack[this.end] = false;
+            this.start = (start + 1) % sequenceSize;
+            this.end = (end + 1) % sequenceSize;
+            i++;
+        }
+        System.out.println("Now start: " + this.start + ", end: " + this.end);
+    }
+    //check if windowsize if full of unacked?
+    public boolean isfull() {
+        return unacked >= windowsize;
+    }
 
-	public Long gettimer(int pktnumber) {
-		return timer.get(pktnumber);
-	}
+    public int getwindowsize() {
+        return  windowsize;
+    }
 
-	public Boolean getack(int pktnumber) {
-		return ack.get(pktnumber);
-	}
+    public Long gettimer(int pktnumber) {
+        return timer[pktnumber];
+    }
+
+    public boolean getack(int pktnumber) {
+        return ack[pktnumber];
+    }
+
+    public int getfreewindow() {
+        return windowsize - unacked;
+    }
+
+    public Long[] getTimerArray() {
+        return timer;
+    }
+
+    public DatagramPacket[] getPktArray() {
+        return pkt;
+    }
+
+    public void setLastAck(int lastack) {
+        this.lastAck = lastack;
+        return;
+    }
+
+    public int lastack() {
+        return this.lastAck;
+    }
+
+    public int getSequenceSize() {
+        return sequenceSize;
+    }
 
 
 } 

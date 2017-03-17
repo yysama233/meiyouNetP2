@@ -33,6 +33,21 @@ public class PacketProcessor {
     return true;
     }
 
+<<<<<<< HEAD
+=======
+    public static int makechecksum(String data,int len){
+        int sum = 0;
+        for (int i = 0; i < len; i++) {
+            char c = data.charAt(i);
+            sum = sum +  (int)(c);
+            if (sum > 0xFFFF){
+                sum = (sum + 1) & (0x0000FFFF);
+            }
+        }
+        return sum;
+    }
+
+>>>>>>> master
     /**
     * the helper fucntions for unpacking the byte array
     **/
@@ -62,7 +77,6 @@ public class PacketProcessor {
       return get2Bytes(b, 6, 7);
     }
 
-
     public static boolean getACKFlag(byte[] b) {
       return get1ByteBoolean(b, 8);
     }
@@ -76,14 +90,19 @@ public class PacketProcessor {
     }
 
     public static int getrcvw(byte[] b) {
-      int rcvw = b[11] & 0xF;
+      int rcvw = b[11] & 0xFF;
       return rcvw;
     }
 
     /**
     * the helper fucntions for packing the byte array
     **/
+<<<<<<< HEAD
     public static byte[] pack(int seq_num,int ack_num,int data_len,int checksum,boolean ack_flag,boolean syn_flag,boolean fin_flag,int rcws,String data) throws IOException{
+=======
+
+    public static byte[] pack(int seq_num,int ack_num,int data_len,int checksum,boolean ack_flag,boolean syn_flag,boolean fin_flag,int rcws,String data) throws IOException, NullPointerException{
+>>>>>>> master
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         byte[] seq = intToByte(seq_num, 2);
@@ -100,6 +119,7 @@ public class PacketProcessor {
         flags[0] = (byte)(ack_flag ? 1:0);
         flags[1] = (byte)(syn_flag ? 1:0);
         flags[2] = (byte)(fin_flag ? 1:0);
+
         outputStream.write(flags);
 
         byte[] rcw = intToByte(rcws,1);
@@ -114,13 +134,9 @@ public class PacketProcessor {
       BigInteger bi = BigInteger.valueOf(num);
       byte[] b = bi.toByteArray();
 
-      if (b.length > byte_size) {
-        return null;
-      }
-
       byte[] bytes = new byte[byte_size];
       int j = byte_size-1;
-      for (int i = b.length-1; i >= 0; i--) {
+      for (int i = b.length-1; i >= 0 && j >= 0; i--) {
         bytes[j--] = b[i];
       }
       return bytes;
