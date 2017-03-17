@@ -24,6 +24,8 @@ public class Server {
   private static DatagramPacket received_packet;
   private static Window recvWindow;
   private static int lastAck = 0;
+  private static Long lastAckTime;
+  private static Long currentTime;
   /**
    ** Server Constructor
    **/
@@ -206,6 +208,17 @@ public class Server {
           if (recvWindow.isfull()) {
             System.out.println("server receive window is full!!!");
             continue;
+          }
+          // check if the client site has crashed
+          currentTime = System.currentTimeMillis();
+          if (recvWindow.hasUnackedPkt()) {
+            if (currentTime - lastAckTime > 10) {
+              System.out.println("The client site has crashed");
+            } 
+          } else {
+            if (currentTime - lastAckTime > 20) {
+              System.out.println("the client site has crashed");
+            }
           }
 
           byte[] buf = new byte[1000];
