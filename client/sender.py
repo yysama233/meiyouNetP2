@@ -121,6 +121,7 @@ class Window(object):
             print "check sum error"
             return 0
         if (rcvPkt.ack_flag):
+            lastAckTime = time()
             sendPkt = self.pktArray[rcvPkt.ack_num]
             if (sendPkt):
                 rcvAckPkt = Packet("ack",0,sendPkt.seq_num,(1,0,0),0)
@@ -134,7 +135,7 @@ class Window(object):
                     self.sendWinSize += 1
                     self.sendArray[sendPkt.seq_num] = True
                     self.rcvBuffer.insert(sendPkt.seq_num,rcvPkt.data)
-                    print "rcv insert at%d with %s",sendPkt.seq_num,rcvPkt.data
+                    print("rcv insert at%d with %s"%(sendPkt.seq_num,rcvPkt.data))
                     self.moveToNext()
                     return rcvPkt.datalen
         return 0
@@ -194,6 +195,7 @@ class Window(object):
 SEQUENCE_BIT = 16
 TIMEOUT = 2 #seconds
 DATA_SIZE = 988
+lastAckTime = time()
 def istext(filename):
     try:
         f = open(filename)
@@ -243,6 +245,7 @@ def transfer(fileName,cliWin):
     cliWin.setRevFile(fileName)
     cliWin.isFinished = False
     cliWin.sock.settimeout(1)
+    lastAckTime = time()
     while (data or not cliWin.isFinished):
         if (data and cliWin.windowFree() and cliWin.sendWinSize):
             print "send:\n "+ data
@@ -267,6 +270,9 @@ def transfer(fileName,cliWin):
             #print "time out"
             pass
         curTime = time()
+        if curTime - lastAckTime > 10:
+            print "Server hasn't responsed for 10s. Server crashed."
+            sys.exit()
         cliWin.checkTimeout(curTime)
     return None
 def disconnect(cliWin):

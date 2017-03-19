@@ -24,7 +24,7 @@ public class Server {
   private static DatagramPacket received_packet;
   private static Window recvWindow;
   private static int lastAck = 0;
-  private static Long lastAckTime;
+  private static Long lastRcvTime;
   private static Long currentTime;
   /**
    ** Server Constructor
@@ -33,7 +33,7 @@ public class Server {
     //Check command line input length
     if (args.length != 2) {
       System.out.println("Invalid input."
-       + " Sample input would be java smsengineUDP <port number> <receive window size>");
+       + " Sample input would be java Server <port number> <receive window size>");
          return;
     }
 
@@ -65,6 +65,8 @@ public class Server {
     } catch (SocketException e) {
       System.out.println(e.getMessage());
     }
+    currentTime = System.currentTimeMillis();
+    lastRcvTime = null;
   }
 
   public Window getWindow() {
@@ -197,6 +199,7 @@ public class Server {
 //////////////////////////////////////////main////////////////////////////////////////////
     public static void main (String[] args)  throws IOException{
       Server server = new Server(args);
+      serverSocket.setSoTimeout(1000);
       Window recvWindow =  server.getWindow();
       try {
         //initiate the server socket
@@ -209,111 +212,134 @@ public class Server {
             System.out.println("server receive window is full!!!");
             continue;
           }
-          // check if the client site has crashed
-          currentTime = System.currentTimeMillis();
-          if (recvWindow.hasUnackedPkt()) {
-            if (currentTime - lastAckTime > 10) {
-              System.out.println("The client site has crashed");
-            } 
-          } else {
-            if (currentTime - lastAckTime > 20) {
-              System.out.println("the client site has crashed");
+
+          try {
+            byte[] buf = new byte[1000];
+            received_packet = new DatagramPacket(buf, buf.length);
+            serverSocket.receive(received_packet);
+            InetAddress client_addr = received_packet.getAddress();
+            int client_port = received_packet.getPort();
+            byte[] recc = received_packet.getData();
+
+            System.out.println("-----------------------Received -----------------------");
+            System.out.println("length of packet" + recc.length);
+            byte[] header = Arrays.copyOfRange(recc, 0, 12);
+            System.out.println("rawdata:" + recc);
+
+            int seqNum = PacketProcessor.getIntSeqNum(header);
+            int ackNum = PacketProcessor.getIntAckNum(header);
+            int dataLen = PacketProcessor.getDataLength(header);
+            int checksum = PacketProcessor.getCheckSum(header);
+
+            System.out.println("seqNum: " + seqNum);
+            System.out.println("ackNum: " + ackNum);
+            System.out.println("dataLen: " + dataLen);
+            System.out.println("checksum: " + checksum);
+
+            boolean synFlag = PacketProcessor.getSYNFlag(header);
+            boolean ackFlag = PacketProcessor.getACKFlag(header);
+            boolean finFlag = PacketProcessor.getFINFlag(header);
+            System.out.println("ackFlag: " + ackFlag);
+            System.out.println("synFlag: " + synFlag);
+            System.out.println("finFlag: " + finFlag);
+
+            int rcvw = PacketProcessor.getrcvw(header);
+
+            System.out.println("rcvw: " + rcvw);
+            int recvWindowSize = recvWindow.getfreewindow();
+            System.out.println("server free window: " + recvWindowSize);
+            // if rcvw == 0, then the receiver's window is full of packets
+            // if (rcvw == 0) {
+            //   continue;
+            // }
+
+            byte[] data = Arrays.copyOfRange(recc, 12, recc.length);
+            String clientdata = new String(data, 0, dataLen > data.length ? data.length: dataLen);
+            System.out.println("data.length:" + data.length);
+            System.out.println("Received Data: " + clientdata);
+            System.out.println("client dataLen:" + clientdata.length());
+
+            // Find state of the client to decide how to reply the client
+            String state = findState(synFlag, ackFlag, finFlag, clientdata);
+            System.out.println("Current State: " + state);
+
+            switch(state) {
+                case "ConnRequest":
+                    // here the seqNum of reply = acknum of the client
+                    // the acknum of reply = seqNum + dataLen
+                    // we want to reply ack = true and syn = true, fin = false;
+                    handshake(ackNum, 0, true, true, false,recvWindowSize, "Hello", client_addr, client_port, serverSocket);
+                    lastRcvTime = System.currentTimeMillis();
+                    continue;
+                case "TransferData":
+                    int server_cs = PacketProcessor.makechecksum(clientdata, clientdata.length());
+                    if (server_cs == checksum) {
+                      sendData(recvWindow,seqNum, seqNum, true, false, false, recvWindowSize, clientdata.toUpperCase(), client_addr, client_port, serverSocket);
+                    } else {
+                      System.out.println("server checksum: " + server_cs);
+                      System.out.println("client checksum: " + checksum);
+                      System.out.println("Checksum error");
+                      return;
+                    }
+
+                    // update last packet received
+                    recvWindow.setLastAck(seqNum);
+                    int lastAck = recvWindow.lastack();
+                    System.out.println("Last acked num" + lastAck);
+                    lastRcvTime = System.currentTimeMillis();
+                    System.out.println("lastrcvtime update:" + lastRcvTime);
+                    continue;
+
+                case "AckRecvd":
+                    // mark acked
+                    try {
+                      recvWindow.ackpacket(ackNum);
+                      recvWindowSize = recvWindow.getfreewindow();
+                      System.out.println("server free window: " + recvWindowSize);
+                    } catch (Exception iooe) {
+                      System.out.println("Error occurs during ack packet and moving window.");
+                    }
+                    lastRcvTime = System.currentTimeMillis();
+                    System.out.println("lastrcvtime update:" + lastRcvTime);
+                    continue;
+                case "Disconnect":
+                    handshake(ackNum,0, true, false, true, recvWindowSize, "Bye", client_addr, client_port, serverSocket);
+                    lastRcvTime = null;
+                    continue;
+                    // don't know what to do yet
             }
+            checktimeout(recvWindow);
+          } catch (SocketTimeoutException sot) {
+              // check if the client site has crashed
+              currentTime = System.currentTimeMillis();
+              // System.out.println("current time : " + currentTime);
+              // if (lastRcvTime != null) {
+              //   System.out.println("last rcv time: " + lastRcvTime);
+              // }
+
+              boolean client_crashed = false;
+              if (recvWindow.hasUnackedPkt()) {
+                if (lastRcvTime != null && currentTime - lastRcvTime > 10000) {
+                  System.out.println("The client site has crashed");
+                  client_crashed = true;
+                }
+              } else {
+                if (lastRcvTime != null && currentTime - lastRcvTime > 30000) {
+                  System.out.println("The client site has crashed");
+                  client_crashed = true;
+                }
+              }
+
+              if (client_crashed) {
+                  System.out.println("Refresh window");
+                  int recvWindowSize = recvWindow.getwindowsize();
+                  server.refreshWindow(recvWindowSize);
+                  lastRcvTime = null;
+                  client_crashed = false;
+              }
+
+              continue;
           }
-
-          byte[] buf = new byte[1000];
-          received_packet = new DatagramPacket(buf, buf.length);
-          serverSocket.receive(received_packet);
-
-          InetAddress client_addr = received_packet.getAddress();
-          int client_port = received_packet.getPort();
-
-          byte[] recc = received_packet.getData();
-
-          System.out.println("-----------------------Received -----------------------");
-          System.out.println("length of packet" + recc.length);
-          byte[] header = Arrays.copyOfRange(recc, 0, 12);
-          System.out.println("rawdata:" + recc);
-
-          int seqNum = PacketProcessor.getIntSeqNum(header);
-          int ackNum = PacketProcessor.getIntAckNum(header);
-          int dataLen = PacketProcessor.getDataLength(header);
-          int checksum = PacketProcessor.getCheckSum(header);
-
-          System.out.println("seqNum: " + seqNum);
-          System.out.println("ackNum: " + ackNum);
-          System.out.println("dataLen: " + dataLen);
-          System.out.println("checksum: " + checksum);
-
-          boolean synFlag = PacketProcessor.getSYNFlag(header);
-          boolean ackFlag = PacketProcessor.getACKFlag(header);
-          boolean finFlag = PacketProcessor.getFINFlag(header);
-          System.out.println("ackFlag: " + ackFlag);
-          System.out.println("synFlag: " + synFlag);
-          System.out.println("finFlag: " + finFlag);
-
-          int rcvw = PacketProcessor.getrcvw(header);
-
-          System.out.println("rcvw: " + rcvw);
-          int recvWindowSize = recvWindow.getfreewindow();
-          System.out.println("server free window: " + recvWindowSize);
-          // if rcvw == 0, then the receiver's window is full of packets
-          // if (rcvw == 0) {
-          //   continue;
-          // }
-
-          byte[] data = Arrays.copyOfRange(recc, 12, recc.length);
-          String clientdata = new String(data, 0, dataLen > data.length ? data.length: dataLen);
-          System.out.println("data.length:" + data.length);
-          System.out.println("Received Data: " + clientdata);
-          System.out.println("client dataLen:" + clientdata.length());
-
-          // Find state of the client to decide how to reply the client
-          String state = findState(synFlag, ackFlag, finFlag, clientdata);
-          System.out.println("Current State: " + state);
-
-          switch(state) {
-              case "ConnRequest":
-                  // here the seqNum of reply = acknum of the client
-                  // the acknum of reply = seqNum + dataLen
-                  // we want to reply ack = true and syn = true, fin = false;
-                  handshake(ackNum, 0, true, true, false,recvWindowSize, "Hello", client_addr, client_port, serverSocket);
-                  continue;
-              case "TransferData":
-                  int server_cs = PacketProcessor.makechecksum(clientdata, clientdata.length());
-                  if (server_cs == checksum) {
-                    sendData(recvWindow,seqNum, seqNum, true, false, false, recvWindowSize, clientdata.toUpperCase(), client_addr, client_port, serverSocket);
-                  } else {
-                    System.out.println("server checksum: " + server_cs);
-                    System.out.println("client checksum: " + checksum);
-                    System.out.println("Checksum error");
-                    return;
-                  }
-
-                  // update last packet received
-                  recvWindow.setLastAck(seqNum);
-                  int lastAck = recvWindow.lastack();
-                  System.out.println("Last acked num" + lastAck);
-                  continue;
-
-              case "AckRecvd":
-                  // mark acked
-                  try {
-                    recvWindow.ackpacket(ackNum);
-                    recvWindowSize = recvWindow.getfreewindow();
-                    long curtime = System.currentTimeMillis();
-                    System.out.println("server free window: " + recvWindowSize);
-                  } catch (Exception iooe) {
-                    System.out.println("Error occurs during ack packet and moving window.");
-                  }
-                  continue;
-              case "Disconnect":
-                  handshake(ackNum,0, true, false, true, recvWindowSize, "Bye", client_addr, client_port, serverSocket);
-                  continue;
-                  // don't know what to do yet
-          }
-          checktimeout(recvWindow);
-
         }
         serverSocket.close();
       } catch (NullPointerException e) {

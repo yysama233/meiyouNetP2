@@ -27,7 +27,7 @@ public class Window {
     }
 
     public boolean hasUnackedPkt() {
-        return unacked > 0;
+        return this.unacked > 0;
     }
     //get packet from the window
     public DatagramPacket getpacket(int pktnumber) {
