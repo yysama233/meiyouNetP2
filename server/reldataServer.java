@@ -17,7 +17,7 @@ import java.math.*;
  * calculate the spam score and pass results back to the client
  * Call: java smsengine [Portnumber] [suspicious words] to initiate server
  */
-public class Server {
+public class reldataServer {
   private static PacketProcessor pp = new PacketProcessor();
   private static int portnumber;
   private static DatagramSocket serverSocket;
@@ -29,7 +29,7 @@ public class Server {
   /**
    ** Server Constructor
    **/
-  public Server(String args[]) {
+  public reldataServer(String args[]) {
     //Check command line input length
     if (args.length != 2) {
       System.out.println("Invalid input."
@@ -198,7 +198,7 @@ public class Server {
 
 //////////////////////////////////////////main////////////////////////////////////////////
     public static void main (String[] args)  throws IOException{
-      Server server = new Server(args);
+      reldataServer server = new reldataServer(args);
       serverSocket.setSoTimeout(1000);
       Window recvWindow =  server.getWindow();
       try {
