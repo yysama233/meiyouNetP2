@@ -290,7 +290,7 @@ def clientStart(argv):
         command = raw_input("please input command:")
         commandList = command.split()
         if (len(commandList) >= 1):
-            if (commandList[0] == 'transfer' and len(commandList) == 2):
+            if (commandList[0] == 'transform' and len(commandList) == 2):
                 fileName = commandList[1]
                 if (checkFile(fileName)):
                     transfer(fileName,cliWin)
