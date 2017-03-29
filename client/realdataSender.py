@@ -42,13 +42,13 @@ class Window(object):
         self.head = 0
         self.end = self.windowSize
         self.lastSequence = 0
-
+        self.rcvWindowSize = 0
         self.rcvBuffer = [False]*self.sequenceSize
         self.rcvFile = ""
         self.serHost = serHost
         self.serPort = serPort
         self.mrws = mrws
-
+        self.serverRcvSize = 0
 
     def cliConnect(self):
         sock = socket(AF_INET,SOCK_DGRAM)
@@ -65,7 +65,7 @@ class Window(object):
 
                 if (resPack.ack_num == 0 and resPack.ack_flag == 1 and resPack.syn_flag == 1):
                     self.sock = sock
-                    self.sendWinSize = resPack.mrws
+                    self.serverRcvSize = resPack.mrws
                     return True
             except:
                 print("retry connect...")
@@ -89,14 +89,13 @@ class Window(object):
         self.rcvFile = Name + '-received'+'.'+fileType
         self.rcvWrite = open(self.rcvFile,'w')
     def sendPkt(self,data):
-        pkt = Packet(data,self.lastSequence,0,(0,0,0),self.mrws)
+        pkt = Packet(data,self.lastSequence,0,(0,0,0),self.rcvWindowSize)
         pktMsg = pkt.pack()
         self.pktArray.insert(pkt.seq_num,pkt)
         self.timerArray.insert(pkt.seq_num,time())
         self.lastSequence = (self.lastSequence + 1) % self.sequenceSize
         try:
             self.sock.sendto(pktMsg,(self.serHost,self.serPort))
-            self.sendWinSize -= 1
             print "send data ", pkt.data
             return pkt.datalen
         except:
@@ -111,6 +110,7 @@ class Window(object):
             self.head = (self.head + 1) % self.sequenceSize
             self.end = (self.end + 1) %self.sequenceSize
             self.sendArray[self.end] = False
+            self.rcvWindowSize = self.rcvWindowSize + 1
             print "write finished!"
     def rcvMsg(self,ackMsg):
         rcvPkt = self.decode(ackMsg)
@@ -123,21 +123,24 @@ class Window(object):
         if (rcvPkt.ack_flag):
             lastAckTime = time()
             sendPkt = self.pktArray[rcvPkt.ack_num]
+            self.serverRcvSize = rcvPkt.rcvw
             if (sendPkt):
-                rcvAckPkt = Packet("ack",0,sendPkt.seq_num,(1,0,0),0)
+                
+                if not (self.sendArray[sendPkt.seq_num]):
+                    print "new pkt"
+                    self.sendArray[sendPkt.seq_num] = True
+                    self.rcvBuffer.insert(sendPkt.seq_num,rcvPkt.data)
+                    self.rcvWindowSize = self.rcvWindowSize - 1
+                    print("rcv insert at%d with %s"%(sendPkt.seq_num,rcvPkt.data))
+                    self.moveToNext()
+
+                rcvAckPkt = Packet("ack",0,sendPkt.seq_num,(1,0,0),self.rcvWindowSize)
                 try:
                     self.sock.sendto(rcvAckPkt.pack(),(self.serHost,self.serPort))
                 except:
-                    print "pkt already received"
+                    print "pkt send ACK failed"
                     pass
-                if not (self.sendArray[sendPkt.seq_num]):
-                    print "new pkt"
-                    self.sendWinSize += 1
-                    self.sendArray[sendPkt.seq_num] = True
-                    self.rcvBuffer.insert(sendPkt.seq_num,rcvPkt.data)
-                    print("rcv insert at%d with %s"%(sendPkt.seq_num,rcvPkt.data))
-                    self.moveToNext()
-                    return rcvPkt.datalen
+                return rcvPkt.datalen
         return 0
     def finishTransfer(self):
         print "file " + self.rcvFile + "is downloaded"
@@ -247,7 +250,7 @@ def transfer(fileName,cliWin):
     cliWin.sock.settimeout(1)
     lastAckTime = time()
     while (data or not cliWin.isFinished):
-        if (data and cliWin.windowFree() and cliWin.sendWinSize):
+        if (data and cliWin.windowFree() and cliWin.serverRcvSize):
             print "send:\n "+ data
             size = cliWin.sendPkt(data)
             transferred += size
