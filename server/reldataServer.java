@@ -53,7 +53,6 @@ public class reldataServer {
       return;
     }
 
-
     if (portnumber <= 1024 || portnumber > 65536) {
       System.out.println("Port number should be between 1024 and 65536.");
       return;
@@ -207,12 +206,11 @@ public class reldataServer {
         while (running) {
           //read and decode data from the client
           System.out.println("Server running...");
-
+          boolean onlyack = false;
           if (recvWindow.isfull()) {
             System.out.println("server receive window is full!!!");
-            continue;
+            onlyack = true;
           }
-
           try {
             byte[] buf = new byte[1000];
             received_packet = new DatagramPacket(buf, buf.length);
@@ -249,9 +247,10 @@ public class reldataServer {
             int recvWindowSize = recvWindow.getfreewindow();
             System.out.println("server free window: " + recvWindowSize);
             // if rcvw == 0, then the receiver's window is full of packets
-            // if (rcvw == 0) {
-            //   continue;
-            // }
+            if (rcvw == 0) {
+                checktimeout(recvWindow);
+                continue;
+            }
 
             byte[] data = Arrays.copyOfRange(recc, 12, recc.length);
             String clientdata = new String(data, 0, dataLen > data.length ? data.length: dataLen);
@@ -262,6 +261,11 @@ public class reldataServer {
             // Find state of the client to decide how to reply the client
             String state = findState(synFlag, ackFlag, finFlag, clientdata);
             System.out.println("Current State: " + state);
+
+            // if the receive window is full, the server only receive ack packets
+            if (onlyack & state != "AckRecvd") {
+                continue;
+            }
 
             switch(state) {
                 case "ConnRequest":
@@ -306,7 +310,6 @@ public class reldataServer {
                     handshake(ackNum,0, true, false, true, recvWindowSize, "Bye", client_addr, client_port, serverSocket);
                     lastRcvTime = null;
                     continue;
-                    // don't know what to do yet
             }
             checktimeout(recvWindow);
           } catch (SocketTimeoutException sot) {
@@ -320,18 +323,18 @@ public class reldataServer {
               boolean client_crashed = false;
               if (recvWindow.hasUnackedPkt()) {
                 if (lastRcvTime != null && currentTime - lastRcvTime > 10000) {
-                  System.out.println("The client site has crashed");
+                  System.out.println("The client site has crashed, please restart the client program!");
                   client_crashed = true;
                 }
               } else {
                 if (lastRcvTime != null && currentTime - lastRcvTime > 30000) {
-                  System.out.println("The client site has crashed");
+                  System.out.println("The client site has crashed, please restart the client program!");
                   client_crashed = true;
                 }
               }
 
               if (client_crashed) {
-                  System.out.println("Refresh window");
+                  System.out.println("Refresh window.");
                   int recvWindowSize = recvWindow.getwindowsize();
                   server.refreshWindow(recvWindowSize);
                   lastRcvTime = null;
