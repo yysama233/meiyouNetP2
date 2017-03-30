@@ -29,6 +29,7 @@ class Packet(object):
     def setchksum(self,checksum):
         self.chksum = checksum
     def pack(self):
+        print "pack mrws: ",self.mrws
         self.chksum = self.makecheksum(self.data,self.datalen)
         return struct.pack(self.formatString,self.seq_num,self.ack_num,self.datalen,self.chksum,self.ack_flag,self.syn_flag,self.fin_flag,self.mrws,self.data)
     
@@ -152,6 +153,7 @@ class Window(object):
         self.sendArray = [False] * self.sequenceSize
         self.pktArray = [False] * self.sequenceSize
         self.timerArray = [False] * self.sequenceSize 
+
         self.rcvWrite.close()
 
 
