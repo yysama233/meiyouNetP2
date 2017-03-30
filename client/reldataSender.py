@@ -19,7 +19,7 @@ class Packet(object):
         self.formatString = "!HHHH???B"+ (str)(self.datalen) + "s"
     def makecheksum(self,data,datalen):
         sum = 0
-        print datalen
+        print "check sum datalen ",datalen
         for i in range(datalen):
             c = data[i]
             sum = sum+ ord(c)
@@ -114,18 +114,24 @@ class Window(object):
             print "write finished!"
     def rcvMsg(self,ackMsg):
         rcvPkt = self.decode(ackMsg)
+        print "decode finished"
         rcvChkSum = rcvPkt.makecheksum(rcvPkt.data,rcvPkt.datalen)
         if (rcvChkSum != rcvPkt.chksum):
             print rcvChkSum
             print rcvPkt.chksum
             print "check sum error"
             return 0
+
+        print "rcv ack: ",rcvPkt.ack_flag
         if (rcvPkt.ack_flag):
             lastAckTime = time()
             sendPkt = self.pktArray[rcvPkt.ack_num]
-            self.serverRcvSize = rcvPkt.rcvw
+            print "sendpkt ",sendPkt
+            print "ack flagged "
+            self.serverRcvSize = rcvPkt.mrws
+            print "rcv pkt rcvw ", rcvPkt.mrws
             if (sendPkt):
-                
+                print "sendPkt exist"
                 if not (self.sendArray[sendPkt.seq_num]):
                     print "new pkt"
                     self.sendArray[sendPkt.seq_num] = True
@@ -150,7 +156,7 @@ class Window(object):
     def decode(self,response):
         string_format = "!HHHH???B"+ (str)(len(response) - 12) + "s"
         pack = struct.unpack(string_format, response)
-        print pack
+        print "pack:", pack
         seqNum = int(pack[0])
         ackNum = int(pack[1])
         datalen = int(pack[2])
@@ -162,6 +168,7 @@ class Window(object):
         data = pack[8]
         packet = Packet(data,seqNum,ackNum,(ack_flag,syn_flag,fin_flag),rcvw)
         packet.setchksum(chksum)
+        print "ack ",ack_flag
         return packet
     #set timer in this method
     def windowFree(self):
