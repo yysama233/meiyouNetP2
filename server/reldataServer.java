@@ -84,15 +84,15 @@ public class reldataServer {
     int seqsize = win.getSequenceSize();
     System.out.println("time out checking!!!");
     if (start < end) {
-      for (int i = start; i < end && win.getpacket(i) != null; i++) {
+      for (int i = start; i < end; i++) {
         check_resend(win, curtime, i);
       }
     } else {
-      for (int i = start; i < seqsize && win.getpacket(i) != null; i++) {
+      for (int i = start; i < seqsize; i++) {
         check_resend(win, curtime, i);
       }
 
-      for (int i = 0; i < end && win.getpacket(i) != null; i++) {
+      for (int i = 0; i < end; i++) {
         check_resend(win, curtime, i);
       }
     }
