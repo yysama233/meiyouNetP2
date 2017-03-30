@@ -96,7 +96,6 @@ class Window(object):
         self.lastSequence = (self.lastSequence + 1) % self.sequenceSize
         try:
             self.sock.sendto(pktMsg,(self.serHost,self.serPort))
-            print "send data ", pkt.data
             return pkt.datalen
         except:
             return 0
@@ -137,7 +136,7 @@ class Window(object):
                     self.sendArray[sendPkt.seq_num] = True
                     self.rcvBuffer.insert(sendPkt.seq_num,rcvPkt.data)
                     self.rcvWindowSize = self.rcvWindowSize - 1
-                    print("rcv insert at%d with %s"%(sendPkt.seq_num,rcvPkt.data))
+                    print("rcv insert at%d"%(sendPkt.seq_num)
                     self.moveToNext()
 
                 rcvAckPkt = Packet("ack",0,sendPkt.seq_num,(1,0,0),self.rcvWindowSize)
@@ -258,6 +257,7 @@ def transfer(fileName,cliWin):
     lastAckTime = time()
     while (data or not cliWin.isFinished):
         if (data and cliWin.windowFree() and cliWin.serverRcvSize):
+            print "------------------send---------------------------"
             print "send:\n "+ data
             size = cliWin.sendPkt(data)
             transferred += size
@@ -272,7 +272,7 @@ def transfer(fileName,cliWin):
         print "received", received
         try:
             ackMsg,addr = cliWin.sock.recvfrom(1000)
-            print "rcv MSG"
+            print "-----------------rcv MSG----------------------------"
             receivedSize = cliWin.rcvMsg(ackMsg)
             print "received Size", receivedSize
             received += receivedSize
