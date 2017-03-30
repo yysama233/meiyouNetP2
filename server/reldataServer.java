@@ -200,6 +200,7 @@ public class reldataServer {
       reldataServer server = new reldataServer(args);
       serverSocket.setSoTimeout(1000);
       Window recvWindow =  server.getWindow();
+      boolean connected = false;
       try {
         //initiate the server socket
         boolean running = true;
@@ -207,6 +208,7 @@ public class reldataServer {
           //read and decode data from the client
           System.out.println("Server running...");
           boolean onlyack = false;
+
           if (recvWindow.isfull()) {
             System.out.println("server receive window is full!!!");
             onlyack = true;
@@ -262,6 +264,11 @@ public class reldataServer {
             String state = findState(synFlag, ackFlag, finFlag, clientdata);
             System.out.println("Current State: " + state);
 
+            // check if connected with client, if not connected then we reject any other packet except for connect request
+            if (!connected & state != "ConnRequest") {
+                System.out.println("Server not connect with client");
+                continue;
+            }
             // if the receive window is full, the server only receive ack packets
             if (onlyack & state != "AckRecvd") {
                 continue;
@@ -274,6 +281,8 @@ public class reldataServer {
                     // we want to reply ack = true and syn = true, fin = false;
                     handshake(ackNum, 0, true, true, false,recvWindowSize, "Hello", client_addr, client_port, serverSocket);
                     lastRcvTime = System.currentTimeMillis();
+                    connected = true;
+                    System.out.println("Connect with client!");
                     continue;
                 case "TransferData":
                     int server_cs = PacketProcessor.makechecksum(clientdata, clientdata.length());
@@ -309,6 +318,7 @@ public class reldataServer {
                 case "Disconnect":
                     handshake(ackNum,0, true, false, true, recvWindowSize, "Bye", client_addr, client_port, serverSocket);
                     lastRcvTime = null;
+                    connected = false;
                     continue;
             }
             checktimeout(recvWindow);
@@ -339,6 +349,7 @@ public class reldataServer {
                   server.refreshWindow(recvWindowSize);
                   lastRcvTime = null;
                   client_crashed = false;
+                  connected = false;
               }
 
               continue;
