@@ -123,7 +123,7 @@ class Window(object):
 
         print "rcv ack: ",rcvPkt.ack_flag
         if (rcvPkt.ack_flag):
-            lastAckTime = time()
+
             sendPkt = self.pktArray[rcvPkt.ack_num]
             print "sendpkt ",sendPkt
             print "ack flagged "
@@ -273,6 +273,7 @@ def transfer(fileName,cliWin):
         try:
             ackMsg,addr = cliWin.sock.recvfrom(1000)
             print "-----------------rcv MSG----------------------------"
+            lastAckTime = time()
             receivedSize = cliWin.rcvMsg(ackMsg)
             print "received Size", receivedSize
             received += receivedSize
