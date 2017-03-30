@@ -193,6 +193,7 @@ class Window(object):
         return self.lastSequence != self.end
 
     def checkTimeout(self,curTime):
+        print "Timeout check"
         if self.head < self.end:
             for i in range(self.head,self.end):
                 if (not self.sendArray[i]):
