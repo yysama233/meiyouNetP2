@@ -268,6 +268,9 @@ def transfer(fileName,cliWin):
             print "finish all"
             cliWin.finishTransfer()
             return
+        else:
+            if not data:
+                print ("data all sent")
         print "tran",transferred
         print "received", received
         try:
