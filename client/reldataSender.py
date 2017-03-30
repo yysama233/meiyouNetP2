@@ -72,7 +72,7 @@ class Window(object):
                 print("retry connect...")
         return False
     def disConnect(self):
-        finPack = Packet("Bye",0,0,(0,0,1),0)
+        finPack = Packet("Bye",0,0,(0,0,1),self.rcvWindowSize)
         finMsg = finPack.pack()
         self.sock.settimeout(2)
         for i in range(0,3):
