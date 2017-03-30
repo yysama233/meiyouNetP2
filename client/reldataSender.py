@@ -136,7 +136,7 @@ class Window(object):
                     self.sendArray[sendPkt.seq_num] = True
                     self.rcvBuffer.insert(sendPkt.seq_num,rcvPkt.data)
                     self.rcvWindowSize = self.rcvWindowSize - 1
-                    print("rcv insert at%d"%(sendPkt.seq_num)
+                    print("rcv insert at%d"%(sendPkt.seq_num))
                     self.moveToNext()
 
                 rcvAckPkt = Packet("ack",0,sendPkt.seq_num,(1,0,0),self.rcvWindowSize)
