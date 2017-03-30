@@ -213,12 +213,12 @@ public class reldataServer {
     public static void main (String[] args)  throws IOException{
       reldataServer server = new reldataServer(args);
       serverSocket.setSoTimeout(TIMEOUT);
-      Window recvWindow =  server.getWindow();
       boolean connected = false;
       try {
         //initiate the server socket
         boolean running = true;
         while (running) {
+          Window recvWindow =  server.getWindow();
           //read and decode data from the client
           System.out.println("Server running...");
           boolean onlyack = false;
