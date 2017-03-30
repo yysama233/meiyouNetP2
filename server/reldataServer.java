@@ -107,6 +107,7 @@ public class reldataServer {
     if (acked) {
         System.out.println("pkt acked already: " + i);
     }
+
     if (temp_time == null || cur_pkt == null) {
       return;
     }
@@ -219,6 +220,7 @@ public class reldataServer {
             System.out.println("server receive window is full!!!");
             onlyack = true;
           }
+
           try {
             byte[] buf = new byte[1000];
             received_packet = new DatagramPacket(buf, buf.length);
@@ -275,6 +277,7 @@ public class reldataServer {
                 System.out.println("Server not connect with client");
                 continue;
             }
+
             // if the receive window is full, the server only receive ack packets
             if (onlyack & state != "AckRecvd") {
               System.out.println("window full and receive non-ack");
@@ -291,8 +294,8 @@ public class reldataServer {
                     lastRcvTime = System.currentTimeMillis();
                     connected = true;
                     System.out.println("Connect with client!");
-                    checktimeout(recvWindow);
-                    continue;
+                    break;
+
                 case "TransferData":
                     int server_cs = PacketProcessor.makechecksum(clientdata, clientdata.length());
                     if (server_cs == checksum) {
@@ -309,9 +312,7 @@ public class reldataServer {
                     System.out.println("Last server sent acked num" + lastAck);
                     lastRcvTime = System.currentTimeMillis();
                     System.out.println("lastrcvtime update:" + lastRcvTime);
-
-                    checktimeout(recvWindow);
-                    continue;
+                    break;
 
                 case "AckRecvd":
                     // mark acked
@@ -324,17 +325,15 @@ public class reldataServer {
                     }
                     lastRcvTime = System.currentTimeMillis();
                     System.out.println("lastrcvtime update:" + lastRcvTime);
-                    checktimeout(recvWindow);
-                    continue;
+                    break;
 
                 case "Disconnect":
                     handshake(ackNum,0, true, false, true, recvWindowSize, "Bye", client_addr, client_port, serverSocket);
                     lastRcvTime = null;
                     connected = false;
-                    checktimeout(recvWindow);
                     continue;
             }
-
+            checktimeout(recvWindow);
           } catch (SocketTimeoutException sot) {
               // check if the client site has crashed
               currentTime = System.currentTimeMillis();
@@ -363,7 +362,12 @@ public class reldataServer {
                   lastRcvTime = null;
                   client_crashed = false;
                   connected = false;
+              } else {
+                if (connected) {
+                    checktimeout(recvWindow);
+                }
               }
+
               continue;
           }
         }
