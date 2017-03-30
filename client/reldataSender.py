@@ -278,7 +278,7 @@ def transfer(fileName,cliWin):
             print "received Size", receivedSize
             received += receivedSize
         except:
-            #print "time out"
+            print "time out"
             pass
         curTime = time()
         if curTime - lastAckTime > 10:
