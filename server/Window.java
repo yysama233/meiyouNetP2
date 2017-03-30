@@ -93,6 +93,7 @@ public class Window {
         this.start = newstart;
         this.end = newstart + this.windowsize;
         this.end = this.end % this.sequenceSize;
+        this.unacked = 0;
         System.out.println("Clear window. Window now start at " + newstart + " and end at " + this.end);
     }
 
