@@ -53,6 +53,7 @@ public class Window {
     public void ackpacket(int pktnumber) {
         if (this.ack[pktnumber]) {
             System.out.println("Acked already");
+            return;
         }
         if (this.pkt[pktnumber] == null) {
             System.out.println("No such packet received.");

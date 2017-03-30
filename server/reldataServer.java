@@ -103,10 +103,13 @@ public class reldataServer {
   private static void check_resend(Window win,long curtime,int i) {
     Long temp_time = win.gettimer(i);
     DatagramPacket cur_pkt = win.getpacket(i);
+    boolean acked = win.getack(i);
+
     if (temp_time == null || cur_pkt == null) {
+      System.out.println("pkt received");
       return;
     }
-    if (curtime - temp_time >= 200) {
+    if (curtime - temp_time >= 200 & !acked) {
       System.out.println("Packet Resend: (ackNum)" + i);
       try {
         serverSocket.send(cur_pkt);
@@ -275,7 +278,7 @@ public class reldataServer {
               checktimeout(recvWindow);
               continue;
             }
-
+            checktimeout(recvWindow);
             switch(state) {
                 case "ConnRequest":
                     // here the seqNum of reply = acknum of the client
@@ -323,7 +326,7 @@ public class reldataServer {
                     connected = false;
                     continue;
             }
-            checktimeout(recvWindow);
+
           } catch (SocketTimeoutException sot) {
               // check if the client site has crashed
               currentTime = System.currentTimeMillis();
