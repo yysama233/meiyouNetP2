@@ -149,6 +149,9 @@ class Window(object):
         return 0
     def finishTransfer(self):
         print "file " + self.rcvFile + "is downloaded"
+        self.sendArray = [False] * self.sequenceSize
+        self.pktArray = [False] * self.sequenceSize
+        self.timerArray = [False] * self.sequenceSize 
         self.rcvWrite.close()
 
 
