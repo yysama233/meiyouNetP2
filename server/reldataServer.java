@@ -110,6 +110,8 @@ public class reldataServer {
 
     if (temp_time == null || cur_pkt == null) {
       return;
+    } else {
+        System.out.println("pke not acked yet: " + i);
     }
 
     if (curtime - temp_time >= 200 & !acked) {
