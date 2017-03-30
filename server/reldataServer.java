@@ -271,7 +271,9 @@ public class reldataServer {
             }
             // if the receive window is full, the server only receive ack packets
             if (onlyack & state != "AckRecvd") {
-                continue;
+              System.out.println("window full and receive non-ack");
+              checktimeout(recvWindow);
+              continue;
             }
 
             switch(state) {
@@ -330,27 +332,27 @@ public class reldataServer {
               //   System.out.println("last rcv time: " + lastRcvTime);
               // }
 
-              // boolean client_crashed = false;
-              // if (recvWindow.hasUnackedPkt()) {
-              //   if (lastRcvTime != null && currentTime - lastRcvTime > 10000) {
-              //     System.out.println("The client site has crashed, please restart the client program!");
-              //     client_crashed = true;
-              //   }
-              // } else {
-              //   if (lastRcvTime != null && currentTime - lastRcvTime > 30000) {
-              //     System.out.println("The client site has crashed, please restart the client program!");
-              //     client_crashed = true;
-              //   }
-              // }
+              boolean client_crashed = false;
+              if (recvWindow.hasUnackedPkt()) {
+                if (lastRcvTime != null && currentTime - lastRcvTime > 10000) {
+                  System.out.println("The client site has crashed, please restart the client program!");
+                  client_crashed = true;
+                }
+              } else {
+                if (lastRcvTime != null && currentTime - lastRcvTime > 30000) {
+                  System.out.println("The client site has crashed, please restart the client program!");
+                  client_crashed = true;
+                }
+              }
 
-              // if (client_crashed) {
-              //     System.out.println("Refresh window.");
-              //     int recvWindowSize = recvWindow.getwindowsize();
-              //     server.refreshWindow(recvWindowSize);
-              //     lastRcvTime = null;
-              //     client_crashed = false;
-              //     connected = false;
-              // }
+              if (client_crashed) {
+                  System.out.println("Refresh window.");
+                  int recvWindowSize = recvWindow.getwindowsize();
+                  server.refreshWindow(recvWindowSize);
+                  lastRcvTime = null;
+                  client_crashed = false;
+                  connected = false;
+              }
 
               continue;
           }
