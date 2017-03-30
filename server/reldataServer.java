@@ -26,6 +26,7 @@ public class reldataServer {
   private static int lastAck = 0;
   private static Long lastRcvTime;
   private static Long currentTime;
+  private static int TIMEOUT = 3000; // 300ms
   /**
    ** Server Constructor
    **/
@@ -114,7 +115,7 @@ public class reldataServer {
         System.out.println("pke not acked yet: " + i);
     }
 
-    if (curtime - temp_time >= 200 & !acked) {
+    if (curtime - temp_time >= TIMEOUT & !acked) {
       System.out.println("Packet Resend: (ackNum)" + i);
       try {
         win.settimer(i, curtime);
@@ -211,7 +212,7 @@ public class reldataServer {
 //////////////////////////////////////////main////////////////////////////////////////////
     public static void main (String[] args)  throws IOException{
       reldataServer server = new reldataServer(args);
-      serverSocket.setSoTimeout(1000);
+      serverSocket.setSoTimeout(TIMEOUT);
       Window recvWindow =  server.getWindow();
       boolean connected = false;
       try {
@@ -279,13 +280,13 @@ public class reldataServer {
             System.out.println("Current State: " + state);
 
             // check if connected with client, if not connected then we reject any other packet except for connect request
-            if (!connected & state != "ConnRequest") {
+            if (!connected && state != "ConnRequest") {
                 System.out.println("Server not connect with client");
                 continue;
             }
 
             // if the receive window is full, the server only receive ack packets
-            if (onlyack & state != "AckRecvd") {
+            if (onlyack && state != "AckRecvd") {
               System.out.println("window full and receive non-ack");
               checktimeout(recvWindow);
               continue;
