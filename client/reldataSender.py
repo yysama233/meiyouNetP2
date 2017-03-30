@@ -162,7 +162,7 @@ class Window(object):
             try:
                 response,serAdd = self.sock.recvfrom(1000)
                 resPack = self.decode(response)
-                if (resPack.ack_num == 0 and resPack.fin_flag == 1 and resPack.ack_flag == 1):
+                if (resPack.syn_flag == 1 and resPack.fin_flag == 1 and resPack.ack_flag == 1):
                     return True
             except:
                 print("retry finishing tansfer file...")
