@@ -153,8 +153,21 @@ class Window(object):
         self.sendArray = [False] * self.sequenceSize
         self.pktArray = [False] * self.sequenceSize
         self.timerArray = [False] * self.sequenceSize 
-
         self.rcvWrite.close()
+        finTransPack = Packet("Zanshi Bye",self.lastSequence,self.lastSequence,(1,1,1),self.rcvWindowSize)
+        finTranMsg = finTransPack.pack()
+        self.sock.settimeout(2)
+        for i in range(0,3):
+            self.sock.sendto(finTranMsg,(self.serHost,self.serPort))
+            try:
+                response,serAdd = self.sock.recvfrom(1000)
+                resPack = self.decode(response)
+                if (resPack.ack_num == 0 and resPack.fin_flag == 1 and resPack.ack_flag == 1):
+                    return True
+            except:
+                print("retry finishing tansfer file...")
+        print("file transfer finished but connection not correct")
+        return False
 
 
     def decode(self,response):
