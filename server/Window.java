@@ -86,6 +86,16 @@ public class Window {
         return unacked >= windowsize;
     }
 
+    public void prepareNextTransfer(int newstart) {
+        this.timer = new Long[sequenceSize];
+        this.ack = new boolean[sequenceSize];
+        this.pkt = new DatagramPacket[sequenceSize];
+        this.start = newstart;
+        this.end = newstart + this.windowsize;
+        this.end = this.end % this.sequenceSize;
+        System.out.println("Clear window. Window now start at " + newstart + " and end at " + this.end);
+    }
+
     public int getwindowsize() {
         return  windowsize;
     }

@@ -156,7 +156,9 @@ public class reldataServer {
       try {
           DatagramPacket reply = createReplyPacket(seqNum, ackNum, ackFlag, synFlag, finFlag, rcvw, data, client_addr, client_port);
           serverSocket.send(reply);
-          if (finFlag) {
+          if (ackFlag && finFlag && synFlag) {
+            System.out.println("Finish this transfer! Waiting for new message from client.");
+          } else if (finFlag) {
             System.out.println("Fin&Ack sent! Connection with client" + client_addr +"shut down.");
           } else {
             System.out.println("Syn&Ack sent! Connection setup.");
@@ -198,6 +200,8 @@ public class reldataServer {
         return "Disconnect";
     } else if (!finFlag && !synFlag && !ackFlag && data.length() != 0){
         return "TransferData";
+    } else if (synFlag && ackFlag && finFlag) {
+        return "FinishOneTransfer";
     } else {
         return "wtf";
     }
@@ -328,7 +332,11 @@ public class reldataServer {
                     lastRcvTime = System.currentTimeMillis();
                     System.out.println("lastrcvtime update:" + lastRcvTime);
                     break;
-
+                case "FinishOneTransfer":
+                    //send ack to mean finished
+                    handshake(ackNum, ackNum, true, true, true, recvWindowSize, "Haode", client_addr, client_port, serverSocket);
+                    recvWindow.prepareNextTransfer(ackNum);
+                    continue;
                 case "Disconnect":
                     handshake(ackNum,0, true, false, true, recvWindowSize, "Bye", client_addr, client_port, serverSocket);
                     lastRcvTime = null;
