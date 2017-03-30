@@ -37,8 +37,8 @@ public class Window {
 
     //add an unacked packet into the window
     public void addpacket(int pktnumber, DatagramPacket packet) {
-        long millisStart = Calendar.getInstance().getTimeInMillis();
-        System.out.println(millisStart);
+        long millisStart = System.currentTimeMillis();
+        //System.out.println(millisStart);
         this.unacked++; // we have new unacked packet
 
         if (this.pkt[pktnumber] != null) {
@@ -92,6 +92,10 @@ public class Window {
 
     public Long gettimer(int pktnumber) {
         return timer[pktnumber];
+    }
+
+    public void settimer(int pktnumber, Long time) {
+        timer[pktnumber] = time;
     }
 
     public boolean getack(int pktnumber) {

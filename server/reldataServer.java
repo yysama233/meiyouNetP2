@@ -104,14 +104,17 @@ public class reldataServer {
     Long temp_time = win.gettimer(i);
     DatagramPacket cur_pkt = win.getpacket(i);
     boolean acked = win.getack(i);
-
+    if (acked) {
+        System.out.println("pkt acked already: " + i);
+    }
     if (temp_time == null || cur_pkt == null) {
-      System.out.println("pkt received:" + i);
       return;
     }
+
     if (curtime - temp_time >= 200 & !acked) {
       System.out.println("Packet Resend: (ackNum)" + i);
       try {
+        win.settimer(i, curtime);
         serverSocket.send(cur_pkt);
       } catch (IOException e) {
         System.out.println("IOException exists!");
