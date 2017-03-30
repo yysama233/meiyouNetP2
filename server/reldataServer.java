@@ -106,7 +106,7 @@ public class reldataServer {
     boolean acked = win.getack(i);
 
     if (temp_time == null || cur_pkt == null) {
-      System.out.println("pkt received");
+      System.out.println("pkt received:" + i);
       return;
     }
     if (curtime - temp_time >= 200 & !acked) {
