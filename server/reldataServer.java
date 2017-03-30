@@ -278,7 +278,7 @@ public class reldataServer {
               checktimeout(recvWindow);
               continue;
             }
-            checktimeout(recvWindow);
+
             switch(state) {
                 case "ConnRequest":
                     // here the seqNum of reply = acknum of the client
@@ -288,6 +288,7 @@ public class reldataServer {
                     lastRcvTime = System.currentTimeMillis();
                     connected = true;
                     System.out.println("Connect with client!");
+                    checktimeout(recvWindow);
                     continue;
                 case "TransferData":
                     int server_cs = PacketProcessor.makechecksum(clientdata, clientdata.length());
@@ -297,15 +298,16 @@ public class reldataServer {
                       System.out.println("server checksum: " + server_cs);
                       System.out.println("client checksum: " + checksum);
                       System.out.println("Checksum error");
-                      return;
                     }
 
                     // update last packet received
                     recvWindow.setLastAck(seqNum);
                     int lastAck = recvWindow.lastack();
-                    System.out.println("Last acked num" + lastAck);
+                    System.out.println("Last server sent acked num" + lastAck);
                     lastRcvTime = System.currentTimeMillis();
                     System.out.println("lastrcvtime update:" + lastRcvTime);
+
+                    checktimeout(recvWindow);
                     continue;
 
                 case "AckRecvd":
@@ -319,11 +321,14 @@ public class reldataServer {
                     }
                     lastRcvTime = System.currentTimeMillis();
                     System.out.println("lastrcvtime update:" + lastRcvTime);
+                    checktimeout(recvWindow);
                     continue;
+
                 case "Disconnect":
                     handshake(ackNum,0, true, false, true, recvWindowSize, "Bye", client_addr, client_port, serverSocket);
                     lastRcvTime = null;
                     connected = false;
+                    checktimeout(recvWindow);
                     continue;
             }
 
@@ -356,7 +361,6 @@ public class reldataServer {
                   client_crashed = false;
                   connected = false;
               }
-
               continue;
           }
         }
