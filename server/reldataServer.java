@@ -75,6 +75,8 @@ public class reldataServer {
 
   public void refreshWindow(int size) {
     this.recvWindow = new Window(size);
+    System.out.println("new window start: " + this.recvWindow.start);
+    System.out.println("new window end: " + this.recvWindow.end);
   }
 
   //TODO need to check time instance
@@ -214,11 +216,12 @@ public class reldataServer {
       reldataServer server = new reldataServer(args);
       serverSocket.setSoTimeout(TIMEOUT);
       boolean connected = false;
+      Window recvWindow = server.getWindow();
       try {
         //initiate the server socket
         boolean running = true;
         while (running) {
-          Window recvWindow =  server.getWindow();
+
           //read and decode data from the client
           System.out.println("Server running...");
           boolean onlyack = false;
@@ -260,7 +263,7 @@ public class reldataServer {
 
             int rcvw = PacketProcessor.getrcvw(header);
 
-            System.out.println("rcvw: " + rcvw);
+            System.out.println("client free window: " + rcvw);
             int recvWindowSize = recvWindow.getfreewindow();
             System.out.println("server free window: " + recvWindowSize);
             // if rcvw == 0, then the receiver's window is full of packets
@@ -340,6 +343,8 @@ public class reldataServer {
                     continue;
                 case "Disconnect":
                     handshake(ackNum,0, true, false, true, recvWindowSize, "Bye", client_addr, client_port, serverSocket);
+                    server.refreshWindow(recvWindowSize);
+                    recvWindow = server.getWindow();
                     lastRcvTime = null;
                     connected = false;
                     continue;
@@ -370,6 +375,8 @@ public class reldataServer {
                   System.out.println("Refresh window.");
                   int recvWindowSize = recvWindow.getwindowsize();
                   server.refreshWindow(recvWindowSize);
+                  recvWindow = server.getWindow();
+
                   lastRcvTime = null;
                   client_crashed = false;
                   connected = false;
