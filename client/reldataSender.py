@@ -159,7 +159,8 @@ class Window(object):
         finTransPack = Packet("Zanshi Bye",self.lastSequence,self.lastSequence,(1,1,1),self.rcvWindowSize)
         finTranMsg = finTransPack.pack()
         self.sock.settimeout(2)
-        for i in range(0,3):
+        
+        while True:
             self.sock.sendto(finTranMsg,(self.serHost,self.serPort))
             try:
                 response,serAdd = self.sock.recvfrom(1000)
@@ -167,7 +168,8 @@ class Window(object):
                 if (resPack.syn_flag == 1 and resPack.fin_flag == 1 and resPack.ack_flag == 1):
                     return True
             except:
-                print("retry finishing tansfer file...")
+                pass
+                #print("retry finishing tansfer file...")
         print("file transfer finished but connection not correct")
         return False
 
