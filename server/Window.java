@@ -39,8 +39,10 @@ public class Window {
     public void addpacket(int pktnumber, DatagramPacket packet) {
         long millisStart = System.currentTimeMillis();
         //System.out.println(millisStart);
+        if (!inrange(pktnumber)) {
+            return;
+        }
         this.unacked++; // we have new unacked packet
-
         if (this.pkt[pktnumber] != null) {
             this.unacked--; //duplicate packet, need to send ack again
         }
@@ -136,6 +138,19 @@ public class Window {
 
     public int getSequenceSize() {
         return sequenceSize;
+    }
+
+    public boolean inrange(int pktnumber) {
+        if (this.start < this.end) {
+            if (pktnumber < start || pktnumber > end) {
+                return false;
+            }
+        } else {
+            if (pktnumber > end && pktnumber < start) {
+                return false;
+            }
+        }
+        return true;
     }
 
 
