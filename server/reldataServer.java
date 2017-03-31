@@ -26,7 +26,7 @@ public class reldataServer {
   private static int lastAck = 0;
   private static Long lastRcvTime;
   private static Long currentTime;
-  private static int TIMEOUT = 3000; // 300ms
+  private static int TIMEOUT = 2000; // 300ms
   /**
    ** Server Constructor
    **/
@@ -300,7 +300,7 @@ public class reldataServer {
                     // here the seqNum of reply = acknum of the client
                     // the acknum of reply = seqNum + dataLen
                     // we want to reply ack = true and syn = true, fin = false;
-                    handshake(ackNum, 0, true, true, false,recvWindowSize, "Hello", client_addr, client_port, serverSocket);
+                    handshake(ackNum, 0, true, true, false, recvWindowSize, "Hello", client_addr, client_port, serverSocket);
                     lastRcvTime = System.currentTimeMillis();
                     connected = true;
                     System.out.println("Connect with client!");
@@ -343,6 +343,7 @@ public class reldataServer {
                     continue;
                 case "Disconnect":
                     handshake(ackNum,0, true, false, true, recvWindowSize, "Bye", client_addr, client_port, serverSocket);
+                    recvWindowSize = recvWindow.getwindowsize();
                     server.refreshWindow(recvWindowSize);
                     recvWindow = server.getWindow();
                     lastRcvTime = null;
