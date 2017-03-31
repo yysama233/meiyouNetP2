@@ -92,6 +92,7 @@ public class Window {
         this.timer = new Long[sequenceSize];
         this.ack = new boolean[sequenceSize];
         this.pkt = new DatagramPacket[sequenceSize];
+        newstart++;
         this.start = newstart;
         this.end = newstart + this.windowsize;
         this.end = this.end % this.sequenceSize;
