@@ -116,7 +116,8 @@ public class reldataServer {
     } else {
         System.out.println("pke not acked yet: " + i);
     }
-
+    System.out.println("curtime: " + curtime);
+    System.out.println("temptime: " + temp_time);
     if ((curtime - temp_time) >= 1000) {
       System.out.println("Packet Resend: (ackNum)" + i);
       try {
