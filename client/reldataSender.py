@@ -127,13 +127,17 @@ class Window(object):
             sendPkt = self.pktArray[rcvPkt.ack_num]
             self.serverRcvSize = rcvPkt.mrws
             print "rcv pkt rcvw ", rcvPkt.mrws
-            if (sendPkt and self.rcvWindowSize > 0): # here I add check if self.rcvWindowsize < 0
+            if (sendPkt):
                 print "sendPkt exist"
                 if not (self.sendArray[sendPkt.seq_num]):
                     print "new pkt"
                     self.sendArray[sendPkt.seq_num] = True
                     self.rcvBuffer.insert(sendPkt.seq_num,rcvPkt.data)
-                    self.rcvWindowSize = self.rcvWindowSize - 1
+                    # here I restrict window size to be larger than 0
+                    if (self.rcvWindowSize > 0) :
+                        self.rcvWindowSize = self.rcvWindowSize - 1
+                    else :
+                        self.rcvWindowSize = 0
                     print("rcv insert at%d"%(sendPkt.seq_num))
                     self.moveToNext()
 
