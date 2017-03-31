@@ -124,13 +124,10 @@ class Window(object):
 
         print "rcv ack: ",rcvPkt.ack_flag
         if (rcvPkt.ack_flag):
-
             sendPkt = self.pktArray[rcvPkt.ack_num]
-            print "sendpkt ",sendPkt
-            print "ack flagged "
             self.serverRcvSize = rcvPkt.mrws
             print "rcv pkt rcvw ", rcvPkt.mrws
-            if (sendPkt):
+            if (sendPkt and self.rcvWindowSize > 0): # here I add check if self.rcvWindowsize < 0
                 print "sendPkt exist"
                 if not (self.sendArray[sendPkt.seq_num]):
                     print "new pkt"
@@ -276,7 +273,7 @@ def transfer(fileName,cliWin):
     cliWin.sock.settimeout(TIMEOUT)
     lastAckTime = time()
     while (data or not cliWin.isFinished):
-        if (data and cliWin.windowFree() and cliWin.serverRcvSize):
+        if (data and cliWin.windowFree() and cliWin.serverRcvSize > 0):
             print "------------------send---------------------------"
             print "send:\n "+ data
             size = cliWin.sendPkt(data)
