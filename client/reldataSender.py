@@ -75,7 +75,7 @@ class Window(object):
         finPack = Packet("Bye",0,0,(0,0,1),self.rcvWindowSize)
         finMsg = finPack.pack()
         self.sock.settimeout(2)
-        for i in range(0,3):
+        while True:
             self.sock.sendto(finMsg,(self.serHost,self.serPort))
             try:
                 response,serAdd = self.sock.recvfrom(1000)
@@ -83,7 +83,8 @@ class Window(object):
                 if (resPack.ack_num == 0 and resPack.fin_flag == 1 and resPack.ack_flag == 1):
                     return True
             except:
-                print("retry disconnect...")
+                #print("retry disconnect...")
+                pass
         return False
     def setRevFile(self,fileName):
         Name,fileType = fileName.split('.')
