@@ -56,7 +56,7 @@ class Window(object):
         synPack = Packet('Hello',0,0,(0,1,0),self.mrws)
         synMsg = synPack.pack()
         #print synMsg[12:]
-        sock.settimeout(3)
+        sock.settimeout(2)
         for i in range(0,3):
             sock.sendto(synMsg,(self.serHost,self.serPort))
             try:
@@ -74,7 +74,7 @@ class Window(object):
     def disConnect(self):
         finPack = Packet("Bye",0,0,(0,0,1),self.rcvWindowSize)
         finMsg = finPack.pack()
-        self.sock.settimeout(3)
+        self.sock.settimeout(2)
         for i in range(0,3):
             self.sock.sendto(finMsg,(self.serHost,self.serPort))
             try:
@@ -158,7 +158,7 @@ class Window(object):
         self.rcvWindowSize = self.mrws # not sure if this is good
         finTransPack = Packet("Zanshi Bye",self.lastSequence,self.lastSequence,(1,1,1),self.rcvWindowSize)
         finTranMsg = finTransPack.pack()
-        self.sock.settimeout(3)
+        self.sock.settimeout(2)
         for i in range(0,3):
             self.sock.sendto(finTranMsg,(self.serHost,self.serPort))
             try:
@@ -198,7 +198,7 @@ class Window(object):
         if self.head < self.end:
             for i in range(self.head,self.end):
                 if (not self.sendArray[i]):
-                    if (self.pktArray[i] and curTime - self.pktArray[i].time > 3):
+                    if (self.pktArray[i] and curTime - self.pktArray[i].time > 1):
                         print "resend pkt: " + str(self.pktArray[i].seq_num)
                         try:
                             self.sock.sendto(self.pktArray[i].pack(),(self.serHost,self.serPort))
@@ -207,7 +207,7 @@ class Window(object):
         else:
             for i in range(self.head,self.sequenceSize):
                 if (not self.sendArray[i]):
-                    if (self.pktArray[i] and curTime - self.pktArray[i].time > 3):
+                    if (self.pktArray[i] and curTime - self.pktArray[i].time > 1):
                         print "resend pkt: " + str(self.pktArray[i].seq_num)
                         try:
                             self.sock.sendto(self.pktArray[i].pack(),(self.serHost,self.serPort))
@@ -215,7 +215,7 @@ class Window(object):
                             pass
             for i in range(0,self.head):
                 if (not self.sendArray[i]):
-                    if (self.pktArray[i] and curTime - self.pktArray[i].time > 3):
+                    if (self.pktArray[i] and curTime - self.pktArray[i].time > 1):
                         print "resend pkt: " + str(self.pktArray[i].seq_num)
                         try:
                             self.sock.sendto(self.pktArray[i].pack(),(self.serHost,self.serPort))
@@ -223,7 +223,7 @@ class Window(object):
                             pass
 
 SEQUENCE_BIT = 16
-TIMEOUT = 3 #seconds
+TIMEOUT = 2 #seconds
 DATA_SIZE = 988
 lastAckTime = time()
 def istext(filename):
