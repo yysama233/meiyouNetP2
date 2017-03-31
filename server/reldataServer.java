@@ -117,7 +117,7 @@ public class reldataServer {
         System.out.println("pke not acked yet: " + i);
     }
 
-    if ((curtime - temp_time) >= TIMEOUT) {
+    if ((curtime - temp_time) >= 1000) {
       System.out.println("Packet Resend: (ackNum)" + i);
       try {
         win.settimer(i, curtime);
