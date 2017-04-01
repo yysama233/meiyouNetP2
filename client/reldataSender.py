@@ -176,7 +176,8 @@ class Window(object):
         print "file " + self.rcvFile + "is downloaded"
         self.sendArray = [False] * self.sequenceSize
         self.pktArray = [False] * self.sequenceSize
-        self.timerArray = [False] * self.sequenceSize 
+        self.timerArray = [False] * self.sequenceSize
+        self.rcvBuffer = {} 
         self.rcvWrite.close()
         self.rcvWindowSize = self.mrws # not sure if this is good
         finTransPack = Packet("Zanshi Bye",self.lastSequence,self.lastSequence,(1,1,1),self.rcvWindowSize)
@@ -242,7 +243,7 @@ class Window(object):
                             self.sock.sendto(self.pktArray[i].pack(),(self.serHost,self.serPort))
                         except:
                             pass
-            for i in range(0,self.lastSequence):
+            for i in range(0,self.lastSequence+1):
                 if (not self.sendArray[i]):
                     if (self.pktArray[i] and (curTime - self.pktArray[i].time) > 2):
                         print "resend pkt: " + str(self.pktArray[i].seq_num)
