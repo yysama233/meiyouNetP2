@@ -118,6 +118,7 @@ class Window(object):
             self.end = (self.end + 1) %self.sequenceSize
             self.sendArray[self.end] = False
             print "current head and end ", self.head, " ",self.end
+            print "current head truefalse", self.sendArray[self.head]
             self.rcvWindowSize = self.rcvWindowSize + 1
             print "write finished!"
     def rcvMsg(self,ackMsg):
