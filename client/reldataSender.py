@@ -114,9 +114,12 @@ class Window(object):
             temp = self.rcvBuffer[self.head]
             self.rcvWrite.write(temp)
            # self.received += len(temp)
-
-            self.head = (self.head + 1) % self.sequenceSize
-            self.end = (self.end + 1) %self.sequenceSize
+            tempHead = self.head
+            self.head = (tempHead + 1) %self.sequenceSize
+            tempEnd = self.end
+            self.end = (tempEnd + 1) %self.sequenceSize
+            #self.head = (self.head + 1) % self.sequenceSize
+            #self.end = (self.end + 1) %self.sequenceSize
             self.sendArray[self.end] = False
             print "current head and end ", self.head, " ",self.end
             check = self.sendArray[self.head]
