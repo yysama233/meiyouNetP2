@@ -119,7 +119,7 @@ public class reldataServer {
     // System.out.println("curtime: " + curtime);
     // System.out.println("temptime: " + temp_time);
 
-    if ((curtime - temp_time) >= 300) {
+    if ((curtime - temp_time) >= 2000) {
       System.out.println("Packet Resend: (ackNum)" + i);
       try {
         win.settimer(i, curtime);
