@@ -137,7 +137,7 @@ class Window(object):
             if (sendPkt):
                 print "sendPkt exist: ", sendPkt.seq_num
                 if not (self.sendArray[sendPkt.seq_num]):
-                    self.ackked++
+                    self.ackked+=1
                     print "new pkt ", self.ackked
                     self.sendArray[sendPkt.seq_num] = True
                     self.rcvBuffer.insert(sendPkt.seq_num,rcvPkt.data)
