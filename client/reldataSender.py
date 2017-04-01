@@ -116,6 +116,7 @@ class Window(object):
             self.head = (self.head + 1) % self.sequenceSize
             self.end = (self.end + 1) %self.sequenceSize
             self.sendArray[self.end] = False
+            
             self.rcvWindowSize = self.rcvWindowSize + 1
             print "write finished!"
     def rcvMsg(self,ackMsg):
@@ -149,9 +150,14 @@ class Window(object):
                     print("rcv insert at%d"%(sendPkt.seq_num))
                     self.moveToNext()
                     datareceived = rcvPkt.datalen
+                else:
+                    print "not new ", self.ackkked
+                    print "seq ",self.lastSequence
                 rcvAckPkt = Packet("ack",0,sendPkt.seq_num,(1,0,0),self.rcvWindowSize)
+                
                 try:
                     self.sock.sendto(rcvAckPkt.pack(),(self.serHost,self.serPort))
+                    print "ack sent ",rcvAckPkt.ack_num
                 except:
                     print "pkt send ACK failed"
                     pass
@@ -208,6 +214,7 @@ class Window(object):
         print "Timeout check"
         if self.head < self.lastSequence:
             for i in range(self.head-1,self.lastSequence):
+                print "check ",i
                 if (not self.sendArray[i]):
                     if (self.pktArray[i] and (curTime - self.pktArray[i].time) > 2):
                         print "resend pkt: " + str(self.pktArray[i].seq_num)
