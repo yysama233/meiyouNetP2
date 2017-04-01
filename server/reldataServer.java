@@ -26,7 +26,7 @@ public class reldataServer {
   private static int lastAck = 0;
   private static Long lastRcvTime;
   private static Long currentTime;
-  private static int TIMEOUT = 2000; // 300ms
+  private static int TIMEOUT = 100; // 100ms
   /**
    ** Server Constructor
    **/
