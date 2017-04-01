@@ -285,7 +285,7 @@ public class reldataServer {
             System.out.println("Current State: " + state);
 
             // check if connected with client, if not connected then we reject any other packet except for connect request
-            if (!connected && state != "ConnRequest") {
+            if (!connected && state != "ConnRequest" && state != "Disconnect") {
                 System.out.println("Server not connect with client");
                 continue;
             }
@@ -363,12 +363,12 @@ public class reldataServer {
 
               boolean client_crashed = false;
               if (recvWindow.hasUnackedPkt()) {
-                if (lastRcvTime != null && currentTime - lastRcvTime > 10000) {
+                if (lastRcvTime != null && currentTime - lastRcvTime > 15000) {
                   System.out.println("The client site has crashed, please restart the client program!");
                   client_crashed = true;
                 }
               } else {
-                if (lastRcvTime != null && currentTime - lastRcvTime > 30000) {
+                if (lastRcvTime != null && currentTime - lastRcvTime > 40000) {
                   System.out.println("The client site has crashed, please restart the client program!");
                   client_crashed = true;
                 }
