@@ -50,7 +50,7 @@ class Window(object):
         self.serPort = serPort
         self.mrws = mrws
         self.serverRcvSize = 0
-
+        self.ackked = 0
     def cliConnect(self):
         sock = socket(AF_INET,SOCK_DGRAM)
         synPack = Packet('Hello',0,0,(0,1,0),self.mrws)
@@ -96,6 +96,8 @@ class Window(object):
         self.pktArray.insert(pkt.seq_num,pkt)
         self.timerArray.insert(pkt.seq_num,time())
         self.lastSequence = (self.lastSequence + 1) % self.sequenceSize
+        print "seq ",pkt.seq_num
+
         while True:
             try:
                 self.sock.sendto(pktMsg,(self.serHost,self.serPort))
@@ -135,7 +137,8 @@ class Window(object):
             if (sendPkt):
                 print "sendPkt exist: ", sendPkt.seq_num
                 if not (self.sendArray[sendPkt.seq_num]):
-                    print "new pkt"
+                    self.ackked++
+                    print "new pkt ", self.ackked
                     self.sendArray[sendPkt.seq_num] = True
                     self.rcvBuffer.insert(sendPkt.seq_num,rcvPkt.data)
                     # here I restrict window size to be larger than 0
@@ -288,7 +291,6 @@ def transfer(fileName,cliWin):
     while (data or not cliWin.isFinished):
         if (data and cliWin.windowFree() and cliWin.serverRcvSize > 0):
             print "------------------send---------------------------"
-            print "send:\n "+ data
             size = cliWin.sendPkt(data)
             transferred += size
             data = f.read(DATA_SIZE)
