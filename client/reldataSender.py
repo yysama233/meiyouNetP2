@@ -340,7 +340,7 @@ def transfer(fileName,cliWin):
             print "time out"
             pass
         curTime = time()
-        if curTime - lastAckTime > 10:
+        if curTime - lastAckTime > 15:
             print "Server hasn't responsed for 10s. Server crashed."
             sys.exit()
         print "outmost head and tail"
