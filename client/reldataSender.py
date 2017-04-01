@@ -108,7 +108,7 @@ class Window(object):
             print "cur head: ", self.head
             temp = self.rcvBuffer[self.head]
             self.rcvWrite.write(temp)
-            self.received += len(temp)
+           # self.received += len(temp)
             self.head = (self.head + 1) % self.sequenceSize
             self.end = (self.end + 1) %self.sequenceSize
             self.sendArray[self.end] = False
@@ -125,6 +125,7 @@ class Window(object):
             return 0
 
         print "rcv ack: ",rcvPkt.ack_flag
+        datareceived = 0
         if (rcvPkt.ack_flag):
             sendPkt = self.pktArray[rcvPkt.ack_num]
             self.serverRcvSize = rcvPkt.mrws
@@ -142,15 +143,15 @@ class Window(object):
                         self.rcvWindowSize = 0
                     print("rcv insert at%d"%(sendPkt.seq_num))
                     self.moveToNext()
-
+                    datareceived = rcvPkt.datalen
                 rcvAckPkt = Packet("ack",0,sendPkt.seq_num,(1,0,0),self.rcvWindowSize)
                 try:
                     self.sock.sendto(rcvAckPkt.pack(),(self.serHost,self.serPort))
                 except:
                     print "pkt send ACK failed"
                     pass
-                return rcvPkt.datalen
-        return 0
+                
+        return datareceived
     def finishTransfer(self):
         print "file " + self.rcvFile + "is downloaded"
         self.sendArray = [False] * self.sequenceSize
@@ -276,7 +277,8 @@ def transfer(fileName,cliWin):
     f = open(fileName,'rb')
     data = f.read(DATA_SIZE)
     transferred = 0
-    cliWin.received = 0
+    #cliWin.received = 0
+    received = 0
     cliWin.setRevFile(fileName)
     cliWin.isFinished = False
     cliWin.sock.settimeout(TIMEOUT)
@@ -290,7 +292,7 @@ def transfer(fileName,cliWin):
             data = f.read(DATA_SIZE)
             # print "tran",transferred
             # print "received", received
-        elif (transferred <= cliWin.received):
+        elif (transferred <= received):
             print "finish all"
             cliWin.finishTransfer()
             return
@@ -298,14 +300,14 @@ def transfer(fileName,cliWin):
             if not data:
                 print ("data all sent")
         print "tran", transferred
-        print "received", cliWin.received
+        print "received", received
         try:
             ackMsg,addr = cliWin.sock.recvfrom(1000)
             print "-----------------rcv MSG----------------------------"
             lastAckTime = time()
-            cliWin.rcvMsg(ackMsg)
+            receivedSize = cliWin.rcvMsg(ackMsg)
             #print "received Size", receivedSize
-            #received += receivedSize
+            received += receivedSize
         except:
             print "time out"
             pass
