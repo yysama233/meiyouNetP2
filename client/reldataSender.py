@@ -231,6 +231,7 @@ class Window(object):
                     if (self.pktArray[i] and (curTime - self.pktArray[i].time) > 2):
                         print "resend pkt: " + str(self.pktArray[i].seq_num)
                         try:
+                            self.pktArray[i].time = time()
                             self.sock.sendto(self.pktArray[i].pack(),(self.serHost,self.serPort))
                         except:
                             pass
@@ -240,6 +241,7 @@ class Window(object):
                     if (self.pktArray[i] and (curTime - self.pktArray[i].time) > 2):
                         print "resend pkt: " + str(self.pktArray[i].seq_num)
                         try:
+                            self.pktArray[i].time = time()
                             self.sock.sendto(self.pktArray[i].pack(),(self.serHost,self.serPort))
                         except:
                             pass
@@ -248,6 +250,7 @@ class Window(object):
                     if (self.pktArray[i] and (curTime - self.pktArray[i].time) > 2):
                         print "resend pkt: " + str(self.pktArray[i].seq_num)
                         try:
+                            self.pktArray[i].time = time()
                             self.sock.sendto(self.pktArray[i].pack(),(self.serHost,self.serPort))
                         except:
                             pass
@@ -305,7 +308,7 @@ def transfer(fileName,cliWin):
     received = 0
     cliWin.setRevFile(fileName)
     cliWin.isFinished = False
-    cliWin.sock.settimeout(TIMEOUT)
+    cliWin.sock.settimeout(0.01)
     lastAckTime = time()
     while (data or not cliWin.isFinished):
         if (data and cliWin.windowFree() and cliWin.serverRcvSize > 0):
