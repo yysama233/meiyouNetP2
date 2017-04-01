@@ -106,7 +106,7 @@ class Window(object):
             #self.send_pkt(self.end)
             print "write to file"
             print "cur head: ", self.head
-            temp= self.rcvBuffer[self.head]
+            temp = self.rcvBuffer[self.head]
             self.rcvWrite.write(temp)
             self.received += len(temp)
             self.head = (self.head + 1) % self.sequenceSize
@@ -130,7 +130,7 @@ class Window(object):
             self.serverRcvSize = rcvPkt.mrws
             print "rcv pkt rcvw ", rcvPkt.mrws
             if (sendPkt):
-                print "sendPkt exist"
+                print "sendPkt exist: ", sendPkt.seq_num
                 if not (self.sendArray[sendPkt.seq_num]):
                     print "new pkt"
                     self.sendArray[sendPkt.seq_num] = True
@@ -163,6 +163,7 @@ class Window(object):
         self.sock.settimeout(2)
         
         while True:
+
             self.sock.sendto(finTranMsg,(self.serHost,self.serPort))
             try:
                 response,serAdd = self.sock.recvfrom(1000)
