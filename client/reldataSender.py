@@ -110,7 +110,7 @@ class Window(object):
             temp = self.rcvBuffer[self.head]
             self.rcvWrite.write(temp)
            # self.received += len(temp)
-        
+
             self.head = (self.head + 1) % self.sequenceSize
             self.end = (self.end + 1) %self.sequenceSize
             self.sendArray[self.end] = False
@@ -203,10 +203,10 @@ class Window(object):
 
     def checkTimeout(self,curTime):
         print "Timeout check"
-        if self.head < self.end:
-            for i in range(self.head,self.end):
+        if self.head < self.lastSequence:
+            for i in range(self.head,self.lastSequence):
                 if (not self.sendArray[i]):
-                    if (self.pktArray[i] and curTime - self.pktArray[i].time > 1):
+                    if (self.pktArray[i] and (curTime - self.pktArray[i].time) > 2):
                         print "resend pkt: " + str(self.pktArray[i].seq_num)
                         try:
                             self.sock.sendto(self.pktArray[i].pack(),(self.serHost,self.serPort))
@@ -215,15 +215,15 @@ class Window(object):
         else:
             for i in range(self.head,self.sequenceSize):
                 if (not self.sendArray[i]):
-                    if (self.pktArray[i] and curTime - self.pktArray[i].time > 1):
+                    if (self.pktArray[i] and (curTime - self.pktArray[i].time) > 2):
                         print "resend pkt: " + str(self.pktArray[i].seq_num)
                         try:
                             self.sock.sendto(self.pktArray[i].pack(),(self.serHost,self.serPort))
                         except:
                             pass
-            for i in range(0,self.head):
+            for i in range(0,self.lastSequence):
                 if (not self.sendArray[i]):
-                    if (self.pktArray[i] and curTime - self.pktArray[i].time > 1):
+                    if (self.pktArray[i] and (curTime - self.pktArray[i].time) > 2):
                         print "resend pkt: " + str(self.pktArray[i].seq_num)
                         try:
                             self.sock.sendto(self.pktArray[i].pack(),(self.serHost,self.serPort))
