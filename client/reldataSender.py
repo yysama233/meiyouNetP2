@@ -104,12 +104,13 @@ class Window(object):
                 pass
     def moveToNext(self):
         while(self.sendArray[self.head]):
-            #self.send_pkt(self.end)
+           
             print "write to file"
             print "cur head: ", self.head
             temp = self.rcvBuffer[self.head]
             self.rcvWrite.write(temp)
            # self.received += len(temp)
+        
             self.head = (self.head + 1) % self.sequenceSize
             self.end = (self.end + 1) %self.sequenceSize
             self.sendArray[self.end] = False
@@ -300,6 +301,8 @@ def transfer(fileName,cliWin):
         else:
             if not data:
                 print ("data all sent")
+        print "head ",cliWin.head
+        print "tail ", cliWin.end 
         print "tran", transferred
         print "received", received
         try:
