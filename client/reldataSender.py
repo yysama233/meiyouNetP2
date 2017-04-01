@@ -44,7 +44,7 @@ class Window(object):
         self.end = self.windowSize
         self.lastSequence = 0
         self.rcvWindowSize = mrws
-        self.rcvBuffer = [False]*self.sequenceSize
+        self.rcvBuffer = {}
         self.rcvFile = ""
         self.serHost = serHost
         self.serPort = serPort
@@ -147,7 +147,7 @@ class Window(object):
                     print "new pkt ", self.ackked
                     self.sendArray[sendPkt.seq_num] = True
                     print "set ackked to True", sendPkt.seq_num
-                    self.rcvBuffer.insert(sendPkt.seq_num,rcvPkt.data)
+                    self.rcvBuffer[sendPkt.seq_num] = rcvPkt.data
                     # here I restrict window size to be larger than 0
                     if (self.rcvWindowSize > 0) :
                         self.rcvWindowSize = self.rcvWindowSize - 1
