@@ -117,7 +117,7 @@ class Window(object):
             self.head = (self.head + 1) % self.sequenceSize
             self.end = (self.end + 1) %self.sequenceSize
             self.sendArray[self.end] = False
-
+            print "current head and end ", self.head, " ",self.end
             self.rcvWindowSize = self.rcvWindowSize + 1
             print "write finished!"
     def rcvMsg(self,ackMsg):
@@ -139,9 +139,10 @@ class Window(object):
             if (sendPkt):
                 print "sendPkt exist: ", sendPkt.seq_num
                 if not (self.sendArray[sendPkt.seq_num]):
-                    self.ackked+=1
+                    self.ackked +=1
                     print "new pkt ", self.ackked
                     self.sendArray[sendPkt.seq_num] = True
+                    print "set ackked to True", sendPkt.seq_num
                     self.rcvBuffer.insert(sendPkt.seq_num,rcvPkt.data)
                     # here I restrict window size to be larger than 0
                     if (self.rcvWindowSize > 0) :
@@ -150,9 +151,12 @@ class Window(object):
                         self.rcvWindowSize = 0
                     print("rcv insert at%d"%(sendPkt.seq_num))
                     self.moveToNext()
+                    print "head and end after move window ", 
+                    print self.head
+                    print self.end
                     datareceived = rcvPkt.datalen
                 else:
-                    print "not new ", self.ackkked
+                    print "not new ", self.ackked
                     print "seq ",self.lastSequence
                 rcvAckPkt = Packet("ack",0,sendPkt.seq_num,(1,0,0),self.rcvWindowSize)
                 
@@ -213,8 +217,9 @@ class Window(object):
 
     def checkTimeout(self,curTime):
         print "Timeout check"
+        print "head ", self.head
         if self.head < self.lastSequence:
-            for i in range(self.head-1,self.lastSequence):
+            for i in range(self.head,self.lastSequence):
                 print "check ",i
                 if (not self.sendArray[i]):
                     print "timeout,",i
@@ -330,6 +335,9 @@ def transfer(fileName,cliWin):
         if curTime - lastAckTime > 10:
             print "Server hasn't responsed for 10s. Server crashed."
             sys.exit()
+        print "outmost head and tail"
+        print cliWin.head
+        print cliWin.end
         cliWin.checkTimeout(curTime)
     return None
 def disconnect(cliWin):
