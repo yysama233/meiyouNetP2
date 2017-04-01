@@ -180,7 +180,7 @@ class Window(object):
         self.rcvBuffer = {} 
         self.rcvWrite.close()
         self.rcvWindowSize = self.mrws # not sure if this is good
-        finTransPack = Packet("Zanshi Bye",self.lastSequence,self.lastSequence,(1,1,1),self.rcvWindowSize)
+        finTransPack = Packet("Zanshi Bye",self.lastSequence-1,self.lastSequence-1,(1,1,1),self.rcvWindowSize)
         finTranMsg = finTransPack.pack()
         self.sock.settimeout(2)
         
