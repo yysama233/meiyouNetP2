@@ -65,7 +65,6 @@ public class Window {
             this.pkt[pktnumber] = null;
             this.ack[pktnumber] = true;
             this.timer[pktnumber] = null;
-            this.unacked--;
             moveWindow();
             System.out.println("Packet acked!");
         }
@@ -75,6 +74,7 @@ public class Window {
         int i = this.start;
         System.out.println("move window");
         while (this.ack[i]) {
+            this.unacked--;
             System.out.println(i);
             this.ack[this.end] = false;
             this.start = (start + 1) % sequenceSize;
