@@ -207,7 +207,7 @@ class Window(object):
     def checkTimeout(self,curTime):
         print "Timeout check"
         if self.head < self.lastSequence:
-            for i in range(self.head,self.lastSequence):
+            for i in range(self.head-1,self.lastSequence):
                 if (not self.sendArray[i]):
                     if (self.pktArray[i] and (curTime - self.pktArray[i].time) > 2):
                         print "resend pkt: " + str(self.pktArray[i].seq_num)
