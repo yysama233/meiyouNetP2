@@ -92,6 +92,7 @@ class Window(object):
         self.rcvWrite = open(self.rcvFile,'w')
     def sendPkt(self,data):
         pkt = Packet(data,self.lastSequence,0,(0,0,0),self.rcvWindowSize)
+        pkt.time = time()
         pktMsg = pkt.pack()
         self.pktArray.insert(pkt.seq_num,pkt)
         self.timerArray.insert(pkt.seq_num,time())
@@ -116,7 +117,7 @@ class Window(object):
             self.head = (self.head + 1) % self.sequenceSize
             self.end = (self.end + 1) %self.sequenceSize
             self.sendArray[self.end] = False
-            
+
             self.rcvWindowSize = self.rcvWindowSize + 1
             print "write finished!"
     def rcvMsg(self,ackMsg):
@@ -216,6 +217,7 @@ class Window(object):
             for i in range(self.head-1,self.lastSequence):
                 print "check ",i
                 if (not self.sendArray[i]):
+                    print "timeout,",i
                     if (self.pktArray[i] and (curTime - self.pktArray[i].time) > 2):
                         print "resend pkt: " + str(self.pktArray[i].seq_num)
                         try:
