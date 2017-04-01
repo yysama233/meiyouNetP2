@@ -96,11 +96,12 @@ class Window(object):
         self.pktArray.insert(pkt.seq_num,pkt)
         self.timerArray.insert(pkt.seq_num,time())
         self.lastSequence = (self.lastSequence + 1) % self.sequenceSize
-        try:
-            self.sock.sendto(pktMsg,(self.serHost,self.serPort))
-            return pkt.datalen
-        except:
-            return 0
+        while True:
+            try:
+                self.sock.sendto(pktMsg,(self.serHost,self.serPort))
+                return pkt.datalen
+            except:
+                pass
     def moveToNext(self):
         while(self.sendArray[self.head]):
             #self.send_pkt(self.end)
