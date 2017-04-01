@@ -106,26 +106,24 @@ class Window(object):
             except:
                 pass
     def moveToNext(self):
-        check = self.sendArray[self.head]
-        while(check):
+
+        while(self.sendArray[self.head]):
            
             print "write to file"
             print "cur head: ", self.head
+
             temp = self.rcvBuffer[self.head]
             self.rcvWrite.write(temp)
+            print "finish write"
            # self.received += len(temp)
-            tempHead = self.head
-            self.head = (tempHead + 1) %self.sequenceSize
-            tempEnd = self.end
-            self.end = (tempEnd + 1) %self.sequenceSize
-            #self.head = (self.head + 1) % self.sequenceSize
-            #self.end = (self.end + 1) %self.sequenceSize
+
+            self.head = (self.head + 1) % self.sequenceSize
+            self.end = (self.end + 1) %self.sequenceSize
             self.sendArray[self.end] = False
             print "current head and end ", self.head, " ",self.end
-            check = self.sendArray[self.head]
-            print "check ",check
+            self.sendArray[self.head]
             self.rcvWindowSize = self.rcvWindowSize + 1
-            print "write finished!"
+            print "move window finished!"
     def rcvMsg(self,ackMsg):
         rcvPkt = self.decode(ackMsg)
         #print "decode finished"
