@@ -233,8 +233,9 @@ class Window(object):
                     if (self.pktArray[i] and (curTime - self.pktArray[i].time) > 2):
                         print "resend pkt: " + str(self.pktArray[i].seq_num)
                         try:
-                            self.pktArray[i].time = time()
+                            
                             self.sock.sendto(self.pktArray[i].pack(),(self.serHost,self.serPort))
+                            self.pktArray[i].time = time()
                         except:
                             pass
         else:
@@ -243,8 +244,9 @@ class Window(object):
                     if (self.pktArray[i] and (curTime - self.pktArray[i].time) > 2):
                         print "resend pkt: " + str(self.pktArray[i].seq_num)
                         try:
-                            self.pktArray[i].time = time()
+                            
                             self.sock.sendto(self.pktArray[i].pack(),(self.serHost,self.serPort))
+                            self.pktArray[i].time = time()
                         except:
                             pass
             for i in range(0,self.lastSequence+1):
@@ -252,8 +254,9 @@ class Window(object):
                     if (self.pktArray[i] and (curTime - self.pktArray[i].time) > 2):
                         print "resend pkt: " + str(self.pktArray[i].seq_num)
                         try:
-                            self.pktArray[i].time = time()
+                            
                             self.sock.sendto(self.pktArray[i].pack(),(self.serHost,self.serPort))
+                            self.pktArray[i].time = time()
                         except:
                             pass
 
