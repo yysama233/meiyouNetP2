@@ -36,12 +36,12 @@ class Packet(object):
 class Window(object):
     def __init__(self,sequenceBit,serHost,serPort,mrws):
         self.sequenceSize = pow(2,sequenceBit)
-        self.windowSize = pow(2,10)
+        #self.windowSize = pow(2,10)
         self.sendArray = [False] * self.sequenceSize
         self.pktArray = [False] * self.sequenceSize
         self.timerArray = [False] * self.sequenceSize 
         self.head = 0
-        self.end = self.windowSize
+        #self.end = self.windowSize
         self.lastSequence = 0
         self.rcvWindowSize = mrws
         self.rcvBuffer = {}
@@ -67,6 +67,8 @@ class Window(object):
                 if (resPack.ack_num == 0 and resPack.ack_flag == 1 and resPack.syn_flag == 1):
                     self.sock = sock
                     self.serverRcvSize = resPack.mrws
+                    self.windowSize = resPack.mrws
+                    self.end = self.windowSize
                     return True
             except:
                 print("retry connect...")
@@ -357,6 +359,9 @@ def clientStart(argv):
         sys.exit()
     serHost,serPort = argv[1].split(':')
     mrws = int(argv[2])
+    if mrws > 255:
+        print ("please input correct window size")
+        sys.exit()
     cliWin = connect(serHost,int(serPort),mrws)
     
     while(True):
