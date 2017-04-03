@@ -345,9 +345,9 @@ def transfer(fileName,cliWin):
             print "time out"
             pass
         curTime = time()
-        if curTime - lastAckTime > 15:
-            print "Server hasn't responsed for 15s. Server crashed."
-            sys.exit()
+        #if curTime - lastAckTime > 15:
+        #    print "Server hasn't responsed for 15s. Server crashed."
+        #    sys.exit()
         print "outmost head and tail"
         print cliWin.head
         print cliWin.end
