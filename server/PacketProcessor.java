@@ -9,16 +9,15 @@ import java.util.Arrays;
 import java.math.BigInteger;
 
 /**
- * @author Yufeng Wang
+ * @author Yang Yang, Yufeng Wang, Mingjun Xie,　
  * @version 1.0
- * the UDP Server that read the suspicious_words file, receive msg file from client, 
- * calculate the spam score and pass results back to the client
- * Call: java smsengine [Portnumber] [suspicious words] to initiate server
+ * The packet processor implements the function of packing and unpacking the packet waiting to be sent 
+ * and received. This file serves as the help function for reldataServer.java
  */
 public class PacketProcessor {
 
     public PacketProcessor() {
-      // wtf is this ...
+      //
     }
     /**
     * @param s, the string input
@@ -32,7 +31,12 @@ public class PacketProcessor {
             return false;
     return true;
     }
-
+    /**
+    * param data, the string input
+    * param len, the prescribed length of checksum
+    * return the checksum value 
+    * This function that makes the checksum for given data input, which is put in the packet header
+    **/
     public static int makechecksum(String data,int len){
         int sum = 0;
         for (int i = 0; i < len; i++) {
@@ -94,7 +98,19 @@ public class PacketProcessor {
     /**
     * the helper fucntions for packing the byte array
     **/
-
+    /**
+    * param seq_num, the sequence number for the packet header
+    * param ack_num, the acknowledgement number for the packet header
+    * param data_len, the data length for the data
+    * param checksum, the checksum value of the data for comparison in the sneder side
+    * param ack_flag, indicating whether the packet is a acknowledgement packet
+    * param syn_flag, indicating whether the packet is a connection setup packet    
+    * param fin_flag, indicating whether the packet is a connection termination packet    
+    * param rcws, the window size from the sender side, if rcws falls to zero, the receiver will pause data transferring
+    * param data, actual data to be packed in the packet
+    * return the byte-stream of one packet
+    * This function that packs parameters into a single packet and returns as the byte-stream data to the receiver
+    **/
     public static byte[] pack(int seq_num,int ack_num,int data_len,int checksum,boolean ack_flag,boolean syn_flag,boolean fin_flag,int rcws,String data) throws IOException, NullPointerException{
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -121,7 +137,12 @@ public class PacketProcessor {
         outputStream.write(data.getBytes());
         return outputStream.toByteArray();
     }
-
+    /**
+    * param num, rcws window size
+    * param byte_size, length for the byte stream
+    * return byte stream of windowsize
+    * This function is the helper function for pack, creating byte-stream of the receiver window size
+    **/
     private static byte[] intToByte(int num,int byte_size) {
 
       BigInteger bi = BigInteger.valueOf(num);

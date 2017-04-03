@@ -11,11 +11,10 @@ import java.math.*;
 
 
 /**
- * @author Yufeng Wang, Mingjun Xie
+ * @author Yufeng Wang, Mingjun Xie, Yang Yang
  * @version 1.0
- * the UDP Server that read the suspicious_words file, receive msg file from client, 
- * calculate the spam score and pass results back to the client
- * Call: java smsengine [Portnumber] [suspicious words] to initiate server
+ * the UDP Server that reads the data from client, capitalizes all the data and transfers back to client.
+ * Call: java reldataServer [Portnumber] to initiate the server
  */
 public class reldataServer {
   private static PacketProcessor pp = new PacketProcessor();
@@ -69,16 +68,29 @@ public class reldataServer {
     lastRcvTime = null;
   }
 
+  /**
+  ** get window
+  ** @param null
+  ** @return this.recvWindow
+  ** the function returns a window instance
+  **/
   public Window getWindow() {
     return this.recvWindow;
   }
-
+  /**
+  * @param size, default window size
+  * @return defaulted window
+  * the function refreshes the window after disconnection
+  **/
   public void refreshWindow(int size) {
     this.recvWindow = new Window(size);
     System.out.println("new window start: " + this.recvWindow.start);
     System.out.println("new window end: " + this.recvWindow.end);
   }
-
+  /**
+  ** @param win, window packet buffer
+  ** the function checkes any possible time-out packet and resend in case. 
+  **/
   //TODO need to check time instance
   private static void checktimeout(Window win) {
     long curtime = System.currentTimeMillis();
@@ -101,7 +113,12 @@ public class reldataServer {
     }
     return;
   }
-
+  /**
+  * @param win, window packet buffer
+  * @param curtime, current time stamp in checking the timeout cases
+  * @param i, specific packet index     
+  * the function checkes timeout in specific packet buffer index
+  **/
   // helper method for timeout 
   private static void check_resend(Window win,long curtime,int i) {
     Long temp_time = win.gettimer(i);
@@ -116,8 +133,6 @@ public class reldataServer {
     } else {
         System.out.println("pke not acked yet: " + i);
     }
-    // System.out.println("curtime: " + curtime);
-    // System.out.println("temptime: " + temp_time);
 
     if ((curtime - temp_time) >= 2000) {
       System.out.println("Packet Resend: (ackNum)" + i);
@@ -135,7 +150,22 @@ public class reldataServer {
     }
     return;
   }
-
+  /**
+  ** createreplypacket
+  ** @param seq_num, the sequence number for the packet header
+  ** @param ack_num, the acknowledgement number for the packet header
+  ** @param data_len, the data length for the data
+  ** @param checksum, the checksum value of the data for comparison in the sneder side
+  ** @param ack_flag, indicating whether the packet is a acknowledgement packet
+  ** @param syn_flag, indicating whether the packet is a connection setup packet    
+  ** @param fin_flag, indicating whether the packet is a connection termination packet    
+  ** @param rcws, the window size from the sender side, if rcws falls to zero, the receiver will pause data transferring
+  ** @param data, actual data to be packed in the packet
+  ** @param client_addr, the client's IP address
+  ** @param client_port, the client's port number
+  ** @return the Datagram packet to be sent to the client side
+  * This function that packs parameters into a single packet and returns as the byte-stream data to the receiver by calling PacketProcessor
+  **/
   private static DatagramPacket createReplyPacket(int seqNum,int ackNum, boolean ackFlag,boolean synFlag,boolean finFlag,int rcvw,String data ,InetAddress client_addr, int client_port) throws IOException, NullPointerException{
       DatagramPacket sent_packet = new DatagramPacket(new byte[1000], 1000, client_addr, client_port);
       int dataLen = data.length();
@@ -156,6 +186,23 @@ public class reldataServer {
       return sent_packet;
   }
 
+  /**
+  ** @param seq_num, the sequence number for the packet header
+  ** @param ack_num, the acknowledgement number for the packet header
+  ** @param data_len, the data length for the data
+  ** @param checksum, the checksum value of the data for comparison in the sneder side
+  ** @param ack_flag, indicating whether the packet is a acknowledgement packet
+  ** @param syn_flag, indicating whether the packet is a connection setup packet    
+  ** @param fin_flag, indicating whether the packet is a connection termination packet    
+  ** @param rcws, the window size from the sender side, if rcws falls to zero, the receiver will pause data transferring
+  ** @param data, actual data to be packed in the packet
+  ** @param client_addr, the client's IP address
+  ** @param client_port, the client's port number
+  ** @param server_socket, the socket in server that is sending out the packet
+  ** @return the Datagram packet to be sent to the client side
+  * This function establishes the reliable data transfer with the client by completing the handshake process
+  **/
+
   private static void handshake(int seqNum,int ackNum,boolean ackFlag,boolean synFlag,boolean finFlag,int rcvw,String data, InetAddress client_addr, int client_port, DatagramSocket serverSocket) {
       // send an syn&ack packet back to the client
       try {
@@ -175,7 +222,22 @@ public class reldataServer {
         System.out.println("Other Connection error" + e);
       }
   }
-
+ /**
+  * @param seq_num, the sequence number for the packet header
+  * @param ack_num, the acknowledgement number for the packet header
+  * @param data_len, the data length for the data
+  * @param checksum, the checksum value of the data for comparison in the sneder side
+  * @param ack_flag, indicating whether the packet is a acknowledgement packet
+  * @param syn_flag, indicating whether the packet is a connection setup packet    
+  * @param fin_flag, indicating whether the packet is a connection termination packet    
+  * @param rcws, the window size from the sender side, if rcws falls to zero, the receiver will pause data transferring
+  * @param data, actual data to be packed in the packet
+  * @param client_addr, the client's IP address
+  * @param client_port, the client's port number
+  * @param server_socket, the socket in server that is sending out the packet
+  * @return the Datagram packet to be sent to the client side
+  * This function sends out the data in data transfer state
+  **/
   private static void sendData(Window win, int seqNum,int ackNum,boolean ackFlag,boolean synFlag,boolean finFlag,int rcvw,String data, InetAddress client_addr, int client_port, DatagramSocket serverSocket) {
 
     try {
@@ -194,7 +256,14 @@ public class reldataServer {
       System.out.println("Other error when sending data." + e);
     }
   }
-
+  /**
+  * @param ack_flag, indicating whether the packet is a acknowledgement packet
+  * @param syn_flag, indicating whether the packet is a connection setup packet    
+  * @param fin_flag, indicating whether the packet is a connection termination packet    
+  * @param data, actual data to be packed in the packet
+  * @return the state of server
+  * This function checks the state of the server.
+  **/
   private static String findState(boolean synFlag, boolean ackFlag, boolean finFlag, String data) {
     if (synFlag && !ackFlag && !finFlag) {
         return "ConnRequest";
@@ -356,10 +425,7 @@ public class reldataServer {
           } catch (SocketTimeoutException sot) {
               // check if the client site has crashed
               currentTime = System.currentTimeMillis();
-              // System.out.println("current time : " + currentTime);
-              // if (lastRcvTime != null) {
-              //   System.out.println("last rcv time: " + lastRcvTime);
-              // }
+
 
               boolean client_crashed = false;
               if (recvWindow.hasUnackedPkt()) {
@@ -373,7 +439,7 @@ public class reldataServer {
                   client_crashed = true;
                 }
               }
-
+              // if crashed refresh window
               if (client_crashed) {
                   System.out.println("Refresh window.");
                   int recvWindowSize = recvWindow.getwindowsize();
