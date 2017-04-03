@@ -138,7 +138,7 @@ class Window(object):
 
         print "rcv ack: ",rcvPkt.ack_flag
         datareceived = 0
-        if (rcvPkt.ack_flag):
+        if (rcvPkt.ack_flag and rcvPkt.fin_flag ==0 and rcvPkt.syn_flag == 0):
             sendPkt = self.pktArray[rcvPkt.ack_num]
             self.serverRcvSize = rcvPkt.mrws
             print "rcv pkt rcvw ", rcvPkt.mrws
@@ -151,10 +151,10 @@ class Window(object):
                     print "set ackked to True", sendPkt.seq_num
                     self.rcvBuffer[sendPkt.seq_num] = rcvPkt.data
                     # here I restrict window size to be larger than 0
-                    if (self.rcvWindowSize > 0) :
-                        self.rcvWindowSize = self.rcvWindowSize - 1
-                    else :
-                        self.rcvWindowSize = 0
+                    #if (self.rcvWindowSize > 0) :
+                    #    self.rcvWindowSize = self.rcvWindowSize - 1
+                    #else :
+                    #    self.rcvWindowSize = 0
                     print("rcv insert at%d"%(sendPkt.seq_num))
                     self.moveToNext()
                     print "head and end after move window ", 
