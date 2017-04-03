@@ -152,7 +152,7 @@ class Window(object):
                     self.rcvBuffer[sendPkt.seq_num] = rcvPkt.data
                     # here I restrict window size to be larger than 0
                     #if (self.rcvWindowSize > 0) :
-                    #    self.rcvWindowSize = self.rcvWindowSize - 1
+                    self.rcvWindowSize = self.rcvWindowSize - 1
                     #else :
                     #    self.rcvWindowSize = 0
                     print("rcv insert at%d"%(sendPkt.seq_num))
