@@ -138,7 +138,7 @@ class Window(object):
 
         print "rcv ack: ",rcvPkt.ack_flag
         datareceived = 0
-        if (rcvPkt.ack_flag and rcvPkt.fin_flag ==0 and rcvPkt.syn_flag == 0):
+        if (rcvPkt.ack_flag == 1 and rcvPkt.fin_flag ==0 and rcvPkt.syn_flag == 0):
             sendPkt = self.pktArray[rcvPkt.ack_num]
             self.serverRcvSize = rcvPkt.mrws
             print "rcv pkt rcvw ", rcvPkt.mrws
@@ -220,7 +220,7 @@ class Window(object):
         return packet
     #set timer in this method
     def windowFree(self):
-        return self.lastSequence != self.end
+        return self.lastSequence < self.end
 
     def checkTimeout(self,curTime):
         print "Timeout check"
@@ -312,7 +312,7 @@ def transfer(fileName,cliWin):
     cliWin.isFinished = False
     cliWin.sock.settimeout(0.01)
     lastAckTime = time()
-    while (data or not cliWin.isFinished):
+    while (data or (not cliWin.isFinished)):
         if (data and cliWin.windowFree() and cliWin.serverRcvSize > 0):
             print "------------------send---------------------------"
             size = cliWin.sendPkt(data)
@@ -343,7 +343,7 @@ def transfer(fileName,cliWin):
             pass
         curTime = time()
         if curTime - lastAckTime > 15:
-            print "Server hasn't responsed for 10s. Server crashed."
+            print "Server hasn't responsed for 15s. Server crashed."
             sys.exit()
         print "outmost head and tail"
         print cliWin.head
