@@ -310,7 +310,7 @@ public class reldataServer {
 
                 case "TransferData":
                     int server_cs = PacketProcessor.makechecksum(clientdata, clientdata.length());
-                    if (server_cs == checksum && recvWindow.inrange(seqNum)) {
+                    if (server_cs == checksum) {
                       sendData(recvWindow,seqNum, seqNum, true, false, false, recvWindowSize, clientdata.toUpperCase(), client_addr, client_port, serverSocket);
                     } else {
                       System.out.println("server checksum: " + server_cs);
